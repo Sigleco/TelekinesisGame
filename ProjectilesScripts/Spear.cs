@@ -2,10 +2,13 @@ using UnityEngine;
 
 public class Spear : Projectile
 {
-    // с увеличением скорости снаряд может пролетать сквозь обьекты из за реализации функции движения, а конкретно функции Transform.Translate()
+    //Класс описывающий поведения поведение копья. При нормальной скорости застревает в обьектах,
+    //при скорости превышающей критический предел пробивает предметы. Пробивает все кроме статичных обьектов окружения  
+    
+    //TODO с увеличением скорости снаряд может пролетать сквозь обьекты из за реализации функции движения, а конкретно функции Transform.Translate()
     private const float CriticalValue = 3f, NormalSpeed = 250f, Length = 1f;
     private Collider _col;
-
+    
     public override Vector3 VertDirection
     {
         get => Vector3.zero;
