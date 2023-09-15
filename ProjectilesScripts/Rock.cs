@@ -3,6 +3,9 @@ using System.Linq;
 
 public class Rock : Projectile
 {
+    //Летает по параболической трактории
+    //При контакте придает импульс обьекту, сам же импульс теряет полностью
+    
     private const float Speed = 2f;
 
     //private Collider _col;
@@ -27,7 +30,7 @@ public class Rock : Projectile
             }
         }
     }
-    
+    //TODO delete this function
     private bool CheckIMovable(Collider col)
     {
         _mono = col.transform.gameObject.GetComponents<MonoBehaviour>();

@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class ProjectileCreator : MonoBehaviour
 {
+    //временный класс для тестов
+    
     public GameObject projectile;
     private GameObject[] _projectiles = new GameObject[10];
 

@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class Plate : Projectile
 {
+    //Позволяет резать обьекты. Для этого есть 2 ориентации
+    //Третья ориентация позволяет оказыватьь дробящее действие на обьекты и защищаться от проджектайлов
+    //Летает строго прямо
+
     private const float Speed = 4f;
 
     private Collider _col;
