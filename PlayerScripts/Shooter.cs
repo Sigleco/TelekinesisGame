@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Shooter : MonoBehaviour
 {
+    //Класс отвечает за то как обьект берется под контроль и как контроль над ним теряется в процессе стрельбы
+    
     [SerializeField] private Transform playerInputSpace = default;
     private bool _haveProjectile;
     private Projectile _projectile;

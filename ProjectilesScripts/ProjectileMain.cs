@@ -3,6 +3,8 @@ using UnityEngine;
 
 public abstract class Projectile : MonoBehaviour, IMovable
 {
+    //Базовый класс для всех проджектайлов
+
     private bool _isMoving, _outOfBlow;
     private bool _onStasis, _underControl;
 

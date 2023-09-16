@@ -3,6 +3,10 @@ using UnityEngine;
 
 public class Bomb : Projectile
 {
+    //Взрывается если в обьект данного класса попаллюбой из проджектайлов
+    //Выталкивает из радиуса взрыва
+    //Летит по прямой
+    
     private const float ExplosionRadius = 2f, Speed = 2f;
 
     private Rigidbody _rb = new Rigidbody();

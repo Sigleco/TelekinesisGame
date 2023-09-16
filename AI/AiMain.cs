@@ -2,6 +2,8 @@ using UnityEngine;
 
 public abstract class AIMain : MonoBehaviour, IMovable
 {
+    //Базовый класс для всех врагов
+    
     public Vector3 VertDirection { get; }
     
     public abstract void StartMoving(Vector3 vx, float d);
