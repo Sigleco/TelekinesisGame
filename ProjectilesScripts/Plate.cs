@@ -20,7 +20,7 @@ public class Plate : Projectile
     
     void Start()
     {
-        ChooseCollider();
+        GetCollider();
     }
 
     private void LateUpdate()
@@ -63,7 +63,7 @@ public class Plate : Projectile
         StopMoving();
     }
 
-    private void ChooseCollider()
+    private void GetCollider()
     {
         Collider[] ar = gameObject.GetComponents<Collider>();
 

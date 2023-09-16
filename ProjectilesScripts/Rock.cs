@@ -30,6 +30,7 @@ public class Rock : Projectile
             }
         }
     }
+    
     //TODO delete this function
     private bool CheckIMovable(Collider col)
     {

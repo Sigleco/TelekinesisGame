@@ -17,7 +17,7 @@ public class Spear : Projectile
 
     void Start()
     {
-        ChooseCollider();
+        GetCollider();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -60,7 +60,7 @@ public class Spear : Projectile
         gameObject.transform.SetParent(parent);
     }
 
-    private void ChooseCollider()
+    private void GetCollider()
     {
         Collider[] ar = gameObject.GetComponents<Collider>();
 
