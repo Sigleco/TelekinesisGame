@@ -2,6 +2,8 @@ using UnityEngine;
 
 public interface IMovable
 {
+    //Определяет функционал обьекта, который может быть взят под контроль
+    
     const float TimeToRunOff = 0.2f, TimeToGetPosition = 0.2f;
     public Vector3 VertDirection
     {

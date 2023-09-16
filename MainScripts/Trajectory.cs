@@ -2,6 +2,8 @@ using UnityEngine;
 
 public struct Trajectory
 {
+    //Определяет, как объект движется с заданными проекциями скоростей на оси и дистанцией до цели
+    
     private const float MaxDistance = 10f;
     public readonly float Vx;
     
