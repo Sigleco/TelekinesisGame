@@ -6,9 +6,17 @@ using UnityEngine;
 public class ShooterTest : MonoBehaviour
 {
     public GameObject gb;
-    void Start()
+    /*void Start()
     {
        Shoot();
+    }*/
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Shoot();
+        }
     }
 
     private void Shoot()

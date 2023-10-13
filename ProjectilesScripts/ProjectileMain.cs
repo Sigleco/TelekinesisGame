@@ -46,6 +46,7 @@ public abstract class Projectile : MonoBehaviour, IMovable
 
     public void StopMoving()
     {
+        _rb.constraints = RigidbodyConstraints.FreezeAll;
         _isMoving = false;
         _outOfBlow = false;
     }
