@@ -3,7 +3,11 @@ guid: be5289edb29e2d245b7f4cf10cb39726
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - spear: {fileID: 3196584571445920059, guid: 32faecc8270622e478f2bd1c31da0061, type: 3}
+  - bomb: {fileID: 5541617673462763466, guid: 4950ed8c47b547e47bae4e7af44376d7, type: 3}
+  - rock: {fileID: 5826656174557340918, guid: fc8e71143c6c1bc45a922ceccd5b8d42, type: 3}
+  - plate: {fileID: 1323298211096888472, guid: 3e5c969407d0bb14f9cabc2fe5fbbc75, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

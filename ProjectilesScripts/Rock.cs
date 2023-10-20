@@ -6,7 +6,7 @@ public class Rock : Projectile
     //Летает по параболической трактории
     //При контакте придает импульс обьекту, сам же импульс теряет полностью
     
-    private const float Speed = 2f;
+    private const float Speed = 100f;
 
     //private Collider _col;
     private MonoBehaviour[] _mono = new MonoBehaviour[5];
@@ -18,38 +18,20 @@ public class Rock : Projectile
 
     private void OnCollisionEnter(Collision other)
     {
-        if (CheckIMovable(other.collider))
+        if (other.gameObject.CompareTag("Enemy")) 
+        { 
+            //SwapVelocities<AIAgent>(other.gameObject);
+        }
+        else if (other.gameObject.CompareTag("Projectile")) 
+        { 
+            SwapVelocities<Projectile>(other.gameObject);
+        }
+        else if (other.gameObject.CompareTag("Obstacle"))
         {
-            if (other.gameObject.CompareTag("Enemy"))
-            {
-                //SwapVelocities<AIAgent>(other.gameObject);
-            }
-            else if(other.gameObject.CompareTag("Projectile"))
-            {
-                SwapVelocities<Projectile>(other.gameObject);
-            }
+            StopMoving();
         }
     }
-    
-    //TODO delete this function
-    private bool CheckIMovable(Collider col)
-    {
-        _mono = col.transform.gameObject.GetComponents<MonoBehaviour>();
 
-        if (_mono == null) return false;
-        
-        for (int i = 0; i < _mono.Length; i++)
-        {
-            if (_mono[i].GetType().GetInterfaces().Contains(typeof(IMovable)))
-            {
-                _mono[0] = _mono[i]; 
-                return true;
-            }
-        }
-
-        return false;
-    }
-    
     private void SwapVelocities<T>(GameObject gb) where T:IMovable
     {
         T temp = gb.GetComponent<T>();

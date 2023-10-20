@@ -3,8 +3,9 @@ using UnityEngine;
 public struct Trajectory
 {
     //Определяет, как объект движется с заданными проекциями скоростей на оси и дистанцией до цели
+    //TODO: необходимо следить что обьект долетал до задуманной точки? Проверить, исправить
     
-    private const float MaxDistance = 10f;
+    private const float MaxDistance = 50f;
     public readonly float Vx;
     
     private Vector3 _vX, _vY;

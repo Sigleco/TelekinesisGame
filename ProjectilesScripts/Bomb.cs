@@ -3,9 +3,8 @@ using UnityEngine;
 
 public class Bomb : Projectile
 {
-    //Взрывается если в обьект данного класса попаллюбой из проджектайлов
+    //Взрывается если в обьект данного класса попал любой из проджектайлов
     //Выталкивает из радиуса взрыва
-    //Летит по прямой
     
     private const float ExplosionRadius = 2f, Speed = 2f;
 
@@ -38,25 +37,7 @@ public class Bomb : Projectile
     {
         BlowUp();
     }
-    
-    //useful if tags dont work exactly how intended 
-    /*private bool CheckIMovable(Collider col)
-    {
-        _mono = col.transform.gameObject.GetComponents<MonoBehaviour>();
 
-        if (_mono == null) return false;
-        
-        for (int i = 0; i < _mono.Length; i++)
-        {
-            if (_mono[i].GetType().GetInterfaces().Contains(typeof(IMovable)))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }*/
-        
     private void BlowUp()
     {
         Physics.OverlapSphereNonAlloc(transform.position, ExplosionRadius, _ar, _antiBombMask);
