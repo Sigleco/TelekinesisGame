@@ -6,12 +6,11 @@ public class Bomb : Projectile
     //Взрывается если в обьект данного класса попал любой из проджектайлов
     //Выталкивает из радиуса взрыва
     
-    private const float ExplosionRadius = 2f, Speed = 2f;
+    private const float ExplosionRadius = 2f, Speed = 100f;
 
     private Rigidbody _rb = new Rigidbody();
     private Collider _col = new Collider();
     private Collider[] _ar = new Collider[30];
-    private MonoBehaviour[] _mono = new MonoBehaviour[5];
     private LayerMask _antiBombMask;
 
     public override Vector3 VertDirection
@@ -42,6 +41,7 @@ public class Bomb : Projectile
     {
         Physics.OverlapSphereNonAlloc(transform.position, ExplosionRadius, _ar, _antiBombMask);
         PushAllAround();
+        Destroy(gameObject);
     }
 
     private void PushAllAround()
@@ -52,16 +52,7 @@ public class Bomb : Projectile
             if (CanBePushed(i))
             {
                 Vector3 temp = _ar[i].transform.position - transform.position;
-                
-                if (_ar[i].CompareTag("Enemy"))
-                {
-                    //InvokeOutOfDoom<typeof()>(temp, _ar[i].gameObject);
-                    //InvokeOutOfDoom<AIMain>(temp, _ar[i].gameObject);
-                }
-                else if(_ar[i].CompareTag("Projectile"))
-                {
-                    MoveOutOfExplosion<Projectile>(temp, 0, _ar[i].gameObject);
-                }
+                MoveOutOfExplosion<Projectile>(temp, 0, _ar[i].gameObject);
             }
         }
     }
