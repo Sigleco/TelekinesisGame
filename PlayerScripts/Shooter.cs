@@ -1,4 +1,5 @@
 using System;
+using UnityEditor.Experimental.GraphView;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
@@ -34,8 +35,17 @@ public class Shooter : MonoBehaviour
     private void Shoot()
     {
         RaycastHit hit;
-        Physics.Raycast(transform.position, playerInputSpace.forward, out hit);
-        Vector3 direction = (hit.point - transform.position) - transform.rotation * IMovable.GetDefaultSpot();
+        Vector3 direction;
+        
+        if(Physics.Raycast(transform.position, playerInputSpace.forward, out hit))
+        {
+            direction = (hit.point - transform.position) - transform.rotation * IMovable.GetDefaultSpot();
+        }
+        else
+        {
+            direction = 100f * playerInputSpace.forward - transform.rotation * IMovable.GetDefaultSpot();
+        }
+        
         _projectile.LoseControl();
         _projectile.StartMoving(direction.normalized, direction.magnitude);
         _haveProjectile = false;
@@ -50,6 +60,7 @@ public class Shooter : MonoBehaviour
         {
             if (hit.transform.gameObject.CompareTag("Enemy"))
             {
+                //todo extra check for spear
                 move = hit.transform.gameObject.GetComponent<AIMain>();
             }
             else

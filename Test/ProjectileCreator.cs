@@ -61,14 +61,4 @@ public class ProjectileCreator : MonoBehaviour
             _projectiles[30+i] = Instantiate(plate, 10 * (q * Vector3.forward) + 14 * Vector3.up, q);
         }
     }
-    
-    /*void Start()
-    {
-        
-    }
-    
-    void Update()
-    {
-        
-    }*/
 }
