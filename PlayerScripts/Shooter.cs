@@ -35,7 +35,7 @@ public class Shooter : MonoBehaviour
     {
         RaycastHit hit;
         Physics.Raycast(transform.position, playerInputSpace.forward, out hit);
-        Vector3 direction = (hit.point - transform.position) + IMovable.GetDefaultSpot();
+        Vector3 direction = (hit.point - transform.position) - transform.rotation * IMovable.GetDefaultSpot();
         _projectile.LoseControl();
         _projectile.StartMoving(direction.normalized, direction.magnitude);
         _haveProjectile = false;

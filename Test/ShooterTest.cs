@@ -6,6 +6,7 @@ using UnityEngine;
 public class ShooterTest : MonoBehaviour
 {
     public GameObject gb;
+    
     /*void Start()
     {
        Shoot();

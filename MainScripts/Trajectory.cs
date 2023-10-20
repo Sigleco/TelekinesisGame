@@ -17,19 +17,37 @@ public struct Trajectory
         _curDistance = distance - 0.5f;//0.5f because basis of projectile lay in the centre of the model
         Vx = vX.magnitude;
         _curTime = _lastHeight = _sumOfSteps = 0;
+        if (_vY.magnitude > 0)
+        {
+            _vY = GetVerticalVector();
+        }
     }
 
+    private Vector3 GetVerticalVector()
+    {
+        Vector3 temp = Vector3.Cross(_vX, new Vector3(_vX[2], 0f, _vX[0]));
+        
+        if (temp.y < 0)
+        {
+            temp *= -1;
+        }
+        
+        return temp.normalized;
+    }
+    
     public Vector3 ComputeOffset(bool outOfBlow)
     {
-        Vector3 temp =_vX * Time.deltaTime + _vY * ComputeDeltaHeight(_curTime, outOfBlow);
+        Vector3 deltaX = _vX * Time.deltaTime;
+        Vector3 deltaY = _vY * ComputeDeltaHeight(_curTime, outOfBlow);
+        Vector3 temp = deltaX + deltaY;
         _curTime += Time.deltaTime;
-        _sumOfSteps += temp.x;
+        _sumOfSteps += deltaX.magnitude;
         
         if (_sumOfSteps >= _curDistance)
         {
-            _sumOfSteps -= temp.x;
+            _sumOfSteps -= deltaX.magnitude;
             float delta = _curDistance - _sumOfSteps;
-            temp *= delta / temp.x;
+            temp =  delta * deltaX.normalized + deltaY;
         }
 
         return temp;
