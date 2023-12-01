@@ -15,4 +15,6 @@ public abstract class AIMain : MonoBehaviour, IMovable
     public abstract void GetUnderControl(Transform T);
     
     public abstract void LoseControl();
+
+    public abstract Vector3 GetVelocity();
 }

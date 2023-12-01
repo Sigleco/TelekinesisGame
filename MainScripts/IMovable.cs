@@ -10,6 +10,8 @@ public interface IMovable
         get;
     }
 
+    public Vector3 GetVelocity();
+
     public void StartMoving(Vector3 vX, float distance);
 
     public void StartMovingOutOfBlow(Vector3 vX, float distance);

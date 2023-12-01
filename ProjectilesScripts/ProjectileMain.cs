@@ -31,6 +31,11 @@ public abstract class Projectile : MonoBehaviour, IMovable
     {
         get;
     }
+
+    public Vector3 GetVelocity()
+    {
+        return Velocity;
+    }
     
     public void StartMoving(Vector3 vX, float distance)
     {
