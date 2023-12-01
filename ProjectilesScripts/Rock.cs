@@ -86,10 +86,6 @@ public sealed class RocksHitTracker
         {
             _objs[0].GetComponent<Projectile>().StartMoving(-_velocities[1], 0);
             _objs[1].GetComponent<Projectile>().StartMoving(-_velocities[0], 0);
-            //for tests
-            Vector3 vel1 = _objs[0].GetComponent<Projectile>().GetVelocity();
-            Vector3 vel2 = _objs[1].GetComponent<Projectile>().GetVelocity();
-            //
             _objs.Clear();
             _velocities.Clear();
         }

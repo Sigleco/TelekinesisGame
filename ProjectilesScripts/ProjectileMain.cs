@@ -41,6 +41,11 @@ public abstract class Projectile : MonoBehaviour, IMovable
     {
         Trajectory = GetTrajectory(vX, distance);
         _isMoving = true;
+        
+        if (Velocity.magnitude <= 0.01)
+        {
+            StopMoving();
+        }
     }
     
     public void StartMovingOutOfBlow(Vector3 vX, float distance)

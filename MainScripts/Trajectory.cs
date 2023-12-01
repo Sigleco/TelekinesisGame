@@ -4,6 +4,7 @@ public struct Trajectory
 {
     //Определяет, как объект движется с заданными проекциями скоростей на оси и дистанцией до цели
     //TODO: необходимо следить что обьект долетал до задуманной точки? Проверить, исправить
+    //TODO: trajectory after collision is wrong.
     
     private const float MaxDistance = 50f;
     public readonly float Vx;
