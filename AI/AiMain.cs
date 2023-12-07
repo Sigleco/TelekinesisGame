@@ -6,9 +6,9 @@ public abstract class AIMain : MonoBehaviour, IMovable
     
     public Vector3 VertDirection { get; }
     
-    public abstract void StartMoving(Vector3 vx, float d);
+    public abstract void StartMoving(Vector3 vX, Vector3 vY, float d);
     
-    public abstract void StartMovingOutOfBlow(Vector3 vx, float d);
+    public abstract void StartMovingOutOfBlow(Vector3 vX, Vector3 vY, float d);
 
     public abstract void StopMoving();
 

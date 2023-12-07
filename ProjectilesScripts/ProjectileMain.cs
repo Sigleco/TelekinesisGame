@@ -25,7 +25,7 @@ public abstract class Projectile : MonoBehaviour, IMovable
         }
     }
 
-    protected abstract Trajectory GetTrajectory(Vector3 vX, float distance);
+    protected abstract Trajectory GetTrajectory(Vector3 vX, Vector3 vY, float distance);
     
     public abstract Vector3 VertDirection
     {
@@ -37,9 +37,9 @@ public abstract class Projectile : MonoBehaviour, IMovable
         return Velocity;
     }
     
-    public void StartMoving(Vector3 vX, float distance)
+    public void StartMoving(Vector3 vX, Vector3 vY, float distance)
     {
-        Trajectory = GetTrajectory(vX, distance);
+        Trajectory = GetTrajectory(vX, vY, distance);
         _isMoving = true;
         
         if (Velocity.magnitude <= 0.01)
@@ -48,9 +48,9 @@ public abstract class Projectile : MonoBehaviour, IMovable
         }
     }
     
-    public void StartMovingOutOfBlow(Vector3 vX, float distance)
+    public void StartMovingOutOfBlow(Vector3 vX, Vector3 vY, float distance)
     {
-        StartMoving(vX, distance);
+        StartMoving(vX, vY, distance);
         _outOfBlow = true;
     }
 

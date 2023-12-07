@@ -15,14 +15,14 @@ public struct Trajectory
     public Trajectory(Vector3 vX, Vector3 vY,  float distance)
     {
         _vX = vX;
-        _vY = vY;
+        _vY = -vY;
         _curDistance = distance - 0.5f;//0.5f because basis of projectile lay in the centre of the model
         Vx = vX.magnitude;
         _curTime = _lastHeight = _sumOfSteps = 0;
-        if (_vY.magnitude > 0)
+        /*if (_vY.magnitude > 0)
         {
             _vY = GetVerticalVector();
-        }
+        }*/
     }
 
     private Vector3 GetVerticalVector()

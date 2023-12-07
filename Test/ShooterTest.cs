@@ -23,6 +23,6 @@ public class ShooterTest : MonoBehaviour
     private void Shoot()
     {
         gb = Instantiate(gb, transform.position, transform.rotation);
-        gb.GetComponent<Projectile>().StartMoving(Vector3.right, 10f);
+        gb.GetComponent<Projectile>().StartMoving(Vector3.right, Vector3.up, 10f);
     }
 }

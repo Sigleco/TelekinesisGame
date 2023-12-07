@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
+//File contains rock and rock tracker classes
+
 public class Rock : Projectile
 {
     //Летает по параболической трактории
@@ -13,8 +15,7 @@ public class Rock : Projectile
     private LayerMask _rockMask;
 
     //private Collider _col;
-    private MonoBehaviour[] _mono = new MonoBehaviour[5];
-    
+
     public override Vector3 VertDirection
     {
         get => Vector3.up;
@@ -52,10 +53,10 @@ public class Rock : Projectile
     {
         T temp = gb.GetComponent<T>();
         Vector3 velocity = temp.GetVelocity();
-        temp.StartMoving(-Velocity, 0);
+        temp.StartMoving(-Velocity, temp.VertDirection, 0);
         if (velocity.magnitude != 0)
         {
-            StartMoving(velocity, 0);
+            StartMoving(velocity, VertDirection, 0);
         }
         else
         {
@@ -63,10 +64,10 @@ public class Rock : Projectile
         }
     }
 
-    protected override Trajectory GetTrajectory(Vector3 vX, float distance)
+    protected override Trajectory GetTrajectory(Vector3 vX, Vector3 vY, float distance)
     {
         Velocity = vX.normalized * Speed;
-        return new Trajectory(Velocity, VertDirection, distance);
+        return new Trajectory(Velocity, VertDirection.magnitude * vY, distance);
     }
 }
 
@@ -74,6 +75,7 @@ public sealed class RocksHitTracker
 {
     //class written with bias that in a moment can collide only two rocks
     //todo: if it possible to register same rock multiple times?
+    //todo: if it possible to hit simultaneously more than two rocks?
     private List<GameObject> _objs = new List<GameObject>();
     private List<Vector3> _velocities = new List<Vector3>();
 
@@ -84,8 +86,8 @@ public sealed class RocksHitTracker
 
         if (_objs.Count >= 2)
         {
-            _objs[0].GetComponent<Projectile>().StartMoving(-_velocities[1], 0);
-            _objs[1].GetComponent<Projectile>().StartMoving(-_velocities[0], 0);
+            _objs[0].GetComponent<Projectile>().StartMoving(-_velocities[1], Vector3.up,  0);
+            _objs[1].GetComponent<Projectile>().StartMoving(-_velocities[0], Vector3.up,  0);
             _objs.Clear();
             _velocities.Clear();
         }

@@ -62,15 +62,16 @@ public class Bomb : Projectile
         return _ar[i] != null && _ar[i].gameObject && gameObject != _ar[i].gameObject;
     }
 
-        private void MoveOutOfExplosion<T>(Vector3 vX, float distance, GameObject gb) where T:IMovable
+    private void MoveOutOfExplosion<T>(Vector3 vX, float distance, GameObject gb) where T:IMovable
     {
         gb.GetComponent<T>().StopMoving();
-        gb.GetComponent<T>().StartMovingOutOfBlow(vX.normalized * ExplosionRadius / IMovable.TimeToRunOff, distance);
+        Vector3 vY = gb.GetComponent<Projectile>().VertDirection;
+        gb.GetComponent<T>().StartMovingOutOfBlow(vX.normalized * ExplosionRadius / IMovable.TimeToRunOff, vY, distance);
     }
 
-    protected override Trajectory GetTrajectory(Vector3 vX, float distance)
+    protected override Trajectory GetTrajectory(Vector3 vX, Vector3 vY, float distance)
     {
         Velocity = vX.normalized * Speed;
-        return new Trajectory(Velocity, VertDirection, distance);
+        return new Trajectory(Velocity, VertDirection.magnitude * vY, distance);
     }
 }

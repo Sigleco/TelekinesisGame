@@ -47,7 +47,7 @@ public class Shooter : MonoBehaviour
         }
         
         _projectile.LoseControl();
-        _projectile.StartMoving(direction.normalized, direction.magnitude);
+        _projectile.StartMoving(direction.normalized, playerInputSpace.up, direction.magnitude);
         _haveProjectile = false;
     }
 

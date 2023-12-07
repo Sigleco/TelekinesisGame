@@ -12,9 +12,9 @@ public interface IMovable
 
     public Vector3 GetVelocity();
 
-    public void StartMoving(Vector3 vX, float distance);
+    public void StartMoving(Vector3 vX, Vector3 vY, float distance);
 
-    public void StartMovingOutOfBlow(Vector3 vX, float distance);
+    public void StartMovingOutOfBlow(Vector3 vX, Vector3 vY, float distance);
 
     public void StopMoving();
 

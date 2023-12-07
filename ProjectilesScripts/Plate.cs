@@ -52,10 +52,10 @@ public class Plate : Projectile
         _col.enabled = true;
     }
 
-    protected override Trajectory GetTrajectory(Vector3 vX, float distance)
+    protected override Trajectory GetTrajectory(Vector3 vX, Vector3 vY, float distance)
     {
         Velocity = vX.normalized * Speed;
-        return new Trajectory(Velocity, VertDirection, distance);
+        return new Trajectory(Velocity, VertDirection.magnitude * vY, distance);
     }
     
     private void Stuck()
