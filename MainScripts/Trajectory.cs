@@ -3,9 +3,7 @@ using UnityEngine;
 public struct Trajectory
 {
     //Определяет, как объект движется с заданными проекциями скоростей на оси и дистанцией до цели
-    //TODO: необходимо следить что обьект долетал до задуманной точки? Проверить, исправить
-    //TODO: trajectory after collision is wrong.
-    
+
     private const float MaxDistance = 50f;
     public readonly float Vx;
     
@@ -19,10 +17,6 @@ public struct Trajectory
         _curDistance = distance - 0.5f;//0.5f because basis of projectile lay in the centre of the model
         Vx = vX.magnitude;
         _curTime = _lastHeight = _sumOfSteps = 0;
-        /*if (_vY.magnitude > 0)
-        {
-            _vY = GetVerticalVector();
-        }*/
     }
 
     private Vector3 GetVerticalVector()
@@ -57,25 +51,28 @@ public struct Trajectory
 
     private float ComputeDeltaHeight(float x, bool outOfBlow)
     {
-        float temp;
+        float temp, h;
         
         if (outOfBlow)
         {
-            temp = ComputeBlowHeight(x) - _lastHeight;
+            h = ComputeBlowHeight(x);
         }
         else
         {
-            temp = ComputeHeight(x) - _lastHeight;
+            h = ComputeHeight(x);
+            
         }
 
-        _lastHeight = temp;
+        temp = h - _lastHeight;
+        _lastHeight = h;
 
         return temp;
     }
 
+    //TODO: oткалибровать функцию
     private float ComputeHeight(float x)
     {
-        return  0.25f * x * (x - _curDistance/ MaxDistance);
+        return 2 * x * (x - _curDistance/ MaxDistance);
     }
     
     private float ComputeBlowHeight(float x)

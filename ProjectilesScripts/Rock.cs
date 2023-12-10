@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-//File contains rock and rock tracker classes
+//File contains rock and rock tracker classes!!!!!!!!!!
 
 public class Rock : Projectile
 {
     //Летает по параболической трактории
     //При контакте придает импульс обьекту, сам же импульс теряет полностью
-    
     private const float Speed = 100f;
     private static RocksHitTracker _tracker = new RocksHitTracker();
     private LayerMask _rockMask;
@@ -74,8 +73,8 @@ public class Rock : Projectile
 public sealed class RocksHitTracker
 {
     //class written with bias that in a moment can collide only two rocks
-    //todo: if it possible to register same rock multiple times?
-    //todo: if it possible to hit simultaneously more than two rocks?
+    //two rocks with zero velocity shouldn't collide
+    
     private List<GameObject> _objs = new List<GameObject>();
     private List<Vector3> _velocities = new List<Vector3>();
 
@@ -83,11 +82,15 @@ public sealed class RocksHitTracker
     {
         _objs.Add(obj);
         _velocities.Add(vel);
-
+        
         if (_objs.Count >= 2)
         {
-            _objs[0].GetComponent<Projectile>().StartMoving(-_velocities[1], Vector3.up,  0);
-            _objs[1].GetComponent<Projectile>().StartMoving(-_velocities[0], Vector3.up,  0);
+            if (_velocities[1].magnitude != 0 && _velocities[0].magnitude != 0)
+            {
+                _objs[0].GetComponent<Projectile>().StartMoving(-_velocities[1], Vector3.up,  0);
+                _objs[1].GetComponent<Projectile>().StartMoving(-_velocities[0], Vector3.up,  0);
+            }
+            
             _objs.Clear();
             _velocities.Clear();
         }
