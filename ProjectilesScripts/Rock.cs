@@ -9,7 +9,7 @@ public class Rock : Projectile
 {
     //Летает по параболической трактории
     //При контакте придает импульс обьекту, сам же импульс теряет полностью
-    private const float Speed = 100f;
+    private const float Speed = 50f;
     private static RocksHitTracker _tracker = new RocksHitTracker();
     private LayerMask _rockMask;
 
@@ -37,7 +37,7 @@ public class Rock : Projectile
             {
                 _tracker.RegistreHit(gameObject, Velocity);
             }
-            else
+            else if (LayerMask.GetMask(LayerMask.LayerToName(other.gameObject.layer)) != _rockMask && Velocity.magnitude != 0)
             {
                 SwapVelocities<Projectile>(other.gameObject);
             }
@@ -53,6 +53,7 @@ public class Rock : Projectile
         T temp = gb.GetComponent<T>();
         Vector3 velocity = temp.GetVelocity();
         temp.StartMoving(-Velocity, temp.VertDirection, 0);
+        
         if (velocity.magnitude != 0)
         {
             StartMoving(velocity, VertDirection, 0);
@@ -85,7 +86,7 @@ public sealed class RocksHitTracker
         
         if (_objs.Count >= 2)
         {
-            if (_velocities[1].magnitude != 0 && _velocities[0].magnitude != 0)
+            if (_velocities[1].magnitude != 0 || _velocities[0].magnitude != 0)
             {
                 _objs[0].GetComponent<Projectile>().StartMoving(-_velocities[1], Vector3.up,  0);
                 _objs[1].GetComponent<Projectile>().StartMoving(-_velocities[0], Vector3.up,  0);

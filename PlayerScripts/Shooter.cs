@@ -30,6 +30,11 @@ public class Shooter : MonoBehaviour
                 TakeControl();
             } 
         }
+
+        if (Input.GetKeyDown(KeyCode.Mouse1))
+        {
+            InvokeStasis();
+        }
     }
 
     private void Shoot()
@@ -71,6 +76,27 @@ public class Shooter : MonoBehaviour
             _projectile = (Projectile) move;
             move.GetUnderControl(transform);
             _haveProjectile = true;
+        }
+    }
+
+    private void InvokeStasis()
+    {
+        RaycastHit hit;
+        IMovable move;
+
+        if(Physics.Raycast(transform.position, playerInputSpace.forward, out hit, _canBeControlledMask))
+        {
+            if (hit.transform.gameObject.CompareTag("Enemy"))
+            {
+                //todo extra check for spear
+                move = hit.transform.gameObject.GetComponent<AIMain>();
+            }
+            else
+            {
+                move = hit.transform.gameObject.GetComponent<Projectile>();
+            }
+            
+            move.StopMoving();
         }
     }
 }

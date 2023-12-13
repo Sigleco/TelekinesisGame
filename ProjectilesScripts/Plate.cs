@@ -5,6 +5,7 @@ public class Plate : Projectile
     //Позволяет резать обьекты. Для этого есть 2 ориентации
     //Третья ориентация позволяет оказыватьь дробящее действие на обьекты и защищаться от проджектайлов
     //Летает строго прямо
+    //TODO: improve class way of interacting with the world
 
     private const float Speed = 4f;
 
