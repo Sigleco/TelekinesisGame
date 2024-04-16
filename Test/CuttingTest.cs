@@ -5,23 +5,34 @@ using UnityEngine;
 
 public class EnumeratorTest : MonoBehaviour
 {
-    private Vector3 _contactPoint, _dirU, _dirV;
-    private MeshFilter _filter;
+    //TODO: MAIN. Still goes into endless loop. Dont know why.
+    
+    private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
+    private Vector3 _dirV = Vector3.right;
+    private Vector3 _dirU = Vector3.up;
     private Mesh _mesh;
     private Vector3[] _vertices;
+    private MeshFilter _filter;
     private List<Vector3> _potentialNewVertices = new List<Vector3>();
     private List<Vector3> _approvedNewVertices = new List<Vector3>();
-    private List<int> _intersectedTriangles;
+    private List<int> indicesOfIntersectedTriangles = new List<int>();
     private bool cutReady;
 
     private void Start()
     {
-        _mesh = gameObject.GetComponent<Mesh>();
         _filter = gameObject.GetComponent<MeshFilter>();
+        _mesh = _filter.mesh;
         _vertices = _mesh.vertices;
-        Enumerate();
     }
-    
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Enumerate();
+        }
+    }
+
     //ready
     private void Enumerate()
     {
@@ -29,7 +40,7 @@ public class EnumeratorTest : MonoBehaviour
         
         for (;!cutReady;) 
         {
-            List<int> similarVertices = FindSimilarVertices(_mesh.vertices[nextVertexIndex]);
+            List<int> similarVertices = FindSimilarVertexIndices(_mesh.vertices[nextVertexIndex]);
             CheckTriangles(similarVertices);
             nextVertexIndex = GetNextVertex(similarVertices);
         }
@@ -61,7 +72,7 @@ public class EnumeratorTest : MonoBehaviour
     }
 
     //ready
-    private List<int> FindSimilarVertices(Vector3 wantedVertex)
+    private List<int> FindSimilarVertexIndices(Vector3 wantedVertex)
     {
         List<int> vertices = new List<int>();
         
@@ -81,25 +92,25 @@ public class EnumeratorTest : MonoBehaviour
     {
         for (int i = 0; i < similarVertexIndices.Count; i++)
         {
-            int curIndex = 0;
-            for (;curIndex>=0;)
+            int temp = 0;
+            temp = FindTriangleIndex(temp, similarVertexIndices[i]);
+            if (temp > 0)
             {
-                curIndex = FindFirstTriangleIndex(curIndex, similarVertexIndices[i]);
-                if (PrepareIntersectionPoints(similarVertexIndices[i]) && CheckIntersectedTriangle(similarVertexIndices[i]))
+                if (PrepareIntersectionPoints(temp) &&
+                    CheckIntersectedTriangle(similarVertexIndices[i]))
                 {
-                    ApproveIntersectionPoints();    
+                    ApproveIntersectionPoints();
                 }
             }
         }
     }
-    
+
     //ready
-    private int FindFirstTriangleIndex(int startIndex, int vertexIndex)
+    private int FindTriangleIndex(int startTriangleIndex, int vertexIndex)
     {
-        int i = startIndex;
-        for (; i < _mesh.triangles.Length; i++)
+        for (int i = startTriangleIndex; i < _mesh.triangles.Length; i++)
         {
-            if (_mesh.triangles[i] == vertexIndex)
+            if (vertexIndex == _mesh.triangles[i])
             {
                 return i;
             }
@@ -111,12 +122,7 @@ public class EnumeratorTest : MonoBehaviour
     //ready
     private bool CheckIntersectedTriangle(int index)
     {
-        if (_intersectedTriangles.FindIndex(p => p == index) >= 0)
-        {
-            return false;
-        }
-        
-        return true;
+        return indicesOfIntersectedTriangles.FindIndex(p => p == index) < 0;
     }
 
     /*private void PrepareIntersectionPoints(int index)
@@ -163,8 +169,7 @@ public class EnumeratorTest : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
         {
-            //Может быть проблема со свойствами смешаннного произведения
-            trianglePoints[i] = _mesh.vertices[firstTriangleIndex+i];
+            trianglePoints[i] = _mesh.vertices[_mesh.triangles[firstTriangleIndex+i]];
             tripleProducts[i] = Vector3.Dot(crossProduct, _contactPoint + trianglePoints[i]) / crossProduct.magnitude;
         }
 
@@ -180,7 +185,7 @@ public class EnumeratorTest : MonoBehaviour
 
                 for (int j = 0; j < 3; j++)
                 {
-                    _intersectedTriangles.Add(firstTriangleIndex+i);    
+                    indicesOfIntersectedTriangles.Add(firstTriangleIndex+i);    
                 }
                 
                 return true;
@@ -190,7 +195,7 @@ public class EnumeratorTest : MonoBehaviour
         return false;
     }
     
-    //ready
+    //TODO: something wrong. Incorrect computations
     private Vector3 ComputeIntersectionPoint(Vector3 guide, Vector3 straightStartPoint)
     {
         float[,] matrix = new float[3,3];
@@ -274,7 +279,7 @@ public class EnumeratorTest : MonoBehaviour
         return result;
     }
     
-    //TODO: probably should save indices too
+    //ready
     private void ApproveIntersectionPoints()
     {
         for (int j = 0; j < _potentialNewVertices.Count; j++)
@@ -303,12 +308,12 @@ public class EnumeratorTest : MonoBehaviour
     {
         for (int i = 0; i < vertexIndices.Count; i++)
         {
-            for (int j = 0; j < _intersectedTriangles.Count; i++)
+            for (int j = 0; j < indicesOfIntersectedTriangles.Count; i++)
             {
                 int firstTriangleIndex = vertexIndices[i] - vertexIndices[i] % 3;
                 for (int k = 0; k < 3; k++)
                 {
-                    if (firstTriangleIndex + k != _intersectedTriangles[j])
+                    if (firstTriangleIndex + k != indicesOfIntersectedTriangles[j])
                     {
                         return firstTriangleIndex + k;
                     }
