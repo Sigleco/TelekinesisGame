@@ -10,8 +10,9 @@ public class EnumeratorTest : MonoBehaviour
     private Mesh _mesh;
     private Vector3[] _vertices;
     private List<Vector3> _potentialNewVertices = new List<Vector3>();
-    private List<Vector3> _approvedVertices = new List<Vector3>();
+    private List<Vector3> _approvedNewVertices = new List<Vector3>();
     private List<int> _intersectedTriangles;
+    private bool cutReady;
 
     private void Start()
     {
@@ -21,13 +22,12 @@ public class EnumeratorTest : MonoBehaviour
         Enumerate();
     }
     
-    //TODO: необходимо исключить проверенные треугольники во время проверки
-    //TODO: Добиться перечисления всех необходимых вершин
+    //ready
     private void Enumerate()
     {
         int nextVertexIndex = FindClosestVertex();
         
-        for (;!CutReady();) 
+        for (;!cutReady;) 
         {
             List<int> similarVertices = FindSimilarVertices(_mesh.vertices[nextVertexIndex]);
             CheckTriangles(similarVertices);
@@ -38,14 +38,15 @@ public class EnumeratorTest : MonoBehaviour
     //ready
     private int FindClosestVertex()
     {
-        Vector3 curVertex = _mesh.vertices[0];;
         int j = 0;
+        float curMinDistance = GetDistanceVertexToContactPoint(_mesh.vertices[0]);
         
         for (int i = 1; i < _mesh.vertices.Length; i++)
         {
-            if (_mesh.vertices[i].magnitude < curVertex.magnitude)
+            float nextDistance = GetDistanceVertexToContactPoint(_mesh.vertices[i]);
+            if (nextDistance < curMinDistance)
             {
-                curVertex = _mesh.vertices[i];
+                curMinDistance = nextDistance;
                 j = i;
             }
         }
@@ -53,13 +54,12 @@ public class EnumeratorTest : MonoBehaviour
         return j;
     }
 
-    private bool CutReady()
+    //ready
+    private float GetDistanceVertexToContactPoint(Vector3 vertex)
     {
-        //TODO
-        
-        return true;
+        return (_contactPoint - vertex).magnitude;
     }
-    
+
     //ready
     private List<int> FindSimilarVertices(Vector3 wantedVertex)
     {
@@ -163,8 +163,8 @@ public class EnumeratorTest : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
         {
-            trianglePoints[i] = _mesh.vertices[firstTriangleIndex+i];
             //Может быть проблема со свойствами смешаннного произведения
+            trianglePoints[i] = _mesh.vertices[firstTriangleIndex+i];
             tripleProducts[i] = Vector3.Dot(crossProduct, _contactPoint + trianglePoints[i]) / crossProduct.magnitude;
         }
 
@@ -294,15 +294,29 @@ public class EnumeratorTest : MonoBehaviour
             }
         }
 
-        _approvedVertices = _potentialNewVertices;
+        _approvedNewVertices.AddRange(_potentialNewVertices);
         _potentialNewVertices.Clear();
     }
 
-    private int GetNextVertex()
+    //ready
+    private int GetNextVertex(List<int> vertexIndices)
     {
-        //необходимо исключить проверенные треугольники во время проверки
-        int next = 0;
-        _intersectedTriangles
-        return next;
+        for (int i = 0; i < vertexIndices.Count; i++)
+        {
+            for (int j = 0; j < _intersectedTriangles.Count; i++)
+            {
+                int firstTriangleIndex = vertexIndices[i] - vertexIndices[i] % 3;
+                for (int k = 0; k < 3; k++)
+                {
+                    if (firstTriangleIndex + k != _intersectedTriangles[j])
+                    {
+                        return firstTriangleIndex + k;
+                    }
+                }
+            }
+        }
+
+        cutReady = true;
+        return -1;
     }
 }
