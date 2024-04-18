@@ -94,7 +94,7 @@ public class EnumeratorTest : MonoBehaviour
         for (int i = 0; i < similarVertexIndices.Count; i++)
         {
             temp = FindTriangleIndex(temp+1, similarVertexIndices[i]);
-            if (temp > 0)
+            if (temp >= 0)
             {
                 if (PrepareIntersectionPoints(temp) &&
                     CheckIntersectedTriangle(similarVertexIndices[i]))
@@ -178,12 +178,8 @@ public class EnumeratorTest : MonoBehaviour
             if ((tripleProducts[i%3] < 0 && tripleProducts[(i+1)%3] >= 0 && tripleProducts[(i+2)%3] >= 0) ||
                 (tripleProducts[i%3] >= 0 && tripleProducts[(i+1)%3] < 0 && tripleProducts[(i+2)%3] < 0))
             {
-                Vector3 coef1 = ComputeIntersectionPoint(trianglePoints[i%3] - trianglePoints[(i+1)%3], trianglePoints[i%3]); 
-                Vector3 coef2 = ComputeIntersectionPoint(trianglePoints[i%3] - trianglePoints[(i+2)%3], trianglePoints[i%3]);
-                
-                //TODO: узнать поч коэффициенты вычисляют точку за пределами куба
-                Vector3 newPoint1 = trianglePoints[i % 3] + (trianglePoints[i % 3] - trianglePoints[(i + 1) % 3]) * coef1[2]; 
-                Vector3 newPoint2 = trianglePoints[i%3] + (trianglePoints[i%3] - trianglePoints[(i+2)%3]) * coef2[2];
+                Vector3 newPoint1 = ComputeIntersectionPoint(trianglePoints[(i+1)%3], trianglePoints[i%3]); 
+                Vector3 newPoint2 = ComputeIntersectionPoint(trianglePoints[(i+2)%3], trianglePoints[i%3]);
                 
                 _potentialNewVertices.Add(newPoint1);
                 _potentialNewVertices.Add(newPoint2);
@@ -201,10 +197,12 @@ public class EnumeratorTest : MonoBehaviour
     }
     
     //ready
-    private Vector3 ComputeIntersectionPoint(Vector3 guide, Vector3 straightStartPoint)
+    private Vector3 ComputeIntersectionPoint(Vector3 firstVertex, Vector3 secondVertex)
     {
         float[,] matrix = new float[3,3];
-        
+
+        Vector3 guide = secondVertex - firstVertex;
+
         for (int i = 0; i < 3; i++)
         {
             matrix[i, 0] = _dirU[i];
@@ -214,7 +212,8 @@ public class EnumeratorTest : MonoBehaviour
 
         matrix = FindInverseMatrix(matrix);
 
-        return MultiplyMatrix3x3Vector3x1(matrix, straightStartPoint - _contactPoint);
+        Vector3 coefs = MultiplyMatrix3x3Vector3x1(matrix, secondVertex - _contactPoint);
+        return secondVertex + (secondVertex - firstVertex) * coefs[2];
     }
 
     //ready
@@ -222,7 +221,7 @@ public class EnumeratorTest : MonoBehaviour
     {
         float[,] result = new float[3, 3];
         float[,] minor = new float[2,2];
-
+        
         float det = ComputeDeterminant3x3(matrix);
         
         int A = 0, B = 0;
@@ -239,8 +238,8 @@ public class EnumeratorTest : MonoBehaviour
                 minor[1, 1] = matrix[(B+2)%3, (b+2)%3];
 
                 float pow = (float) Math.Pow(-1, i + j);
-                result[j,i] = (pow/det) * ComputeDeterminant2x2(minor);
-                
+                result[i,j] = (pow/det) * ComputeDeterminant2x2(minor);
+
                 b = a;
                 a = -1;
             }
