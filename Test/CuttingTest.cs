@@ -104,23 +104,27 @@ public class EnumeratorTest : MonoBehaviour
     private List<int> CheckTriangles(List<int> similarVertexIndices)
     {
         List<int> newVertices = new List<int>();
-        int temp = -1;
+        
         for (int i = 0; i < similarVertexIndices.Count; i++)
         {
-            temp = FindFirstTriangleIndex(temp+1, similarVertexIndices[i]);
-            if (temp >= 0)
+            for (int temp = FindFirstTriangleIndex(0, similarVertexIndices[i]);
+                 temp >= 0;
+                 temp = FindFirstTriangleIndex(temp+1, similarVertexIndices[i]))
             {
-                if (PrepareIntersectionPoints(temp) &&
-                    CheckIntersectedTriangle(similarVertexIndices[i]))
+                if (temp >= 0)
                 {
-                    ApproveIntersectionPoints();
-
-                    int index = temp - temp % 3; 
-                    for (int j = 0; j < 3; j++)
+                    if (PrepareIntersectionPoints(temp) &&
+                        CheckIntersectedTriangle(similarVertexIndices[i]))
                     {
-                        newVertices.Add(index + j);
+                        ApproveIntersectionPoints();
+
+                        int index = temp - temp % 3; 
+                        for (int j = 0; j < 3; j++)
+                        {
+                            newVertices.Add(index + j);
+                        }
                     }
-                }
+                }    
             }
         }
 
