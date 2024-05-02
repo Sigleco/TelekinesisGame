@@ -6,7 +6,6 @@ using UnityEngine;
 
 public class EnumeratorTest : MonoBehaviour
 {
-    //TODO: MAIN. Doesnt go into endless loop. Dont know why.
     //Todo: надо отработать сценарий когда касание происходит в вершине. Довольно вероятный сценарий. 
     
     private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
@@ -151,41 +150,7 @@ public class EnumeratorTest : MonoBehaviour
         return indicesOfIntersectedTriangles.FindIndex(p => p == index) < 0;
     }
 
-    /*private void PrepareIntersectionPoints(int index)
-    {
-        int firstTriangleIndex = index - index % 3;
-        Vector3 newPoint1 = Vector3.zero, newPoint2 = Vector3.zero, crossProduct = Vector3.Cross(_dirU, _dirV);
-        
-        Vector3 firstTrianglePoint = _mesh.vertices[firstTriangleIndex];
-        Vector3 secondTrianglePoint = _mesh.vertices[firstTriangleIndex+1];
-        Vector3 thirdTrianglePoint = _mesh.vertices[firstTriangleIndex+2];
-        
-        //Может быть проблема со свойствами смешаннного произведения
-        float result1 = Vector3.Dot(crossProduct, _contactPoint + firstTrianglePoint) / crossProduct.magnitude;
-        float result2 = Vector3.Dot(crossProduct, _contactPoint + secondTrianglePoint) / crossProduct.magnitude;
-        float result3 = Vector3.Dot(crossProduct, _contactPoint + thirdTrianglePoint) / crossProduct.magnitude;
-
-        if ((result1 < 0 && result2 >= 0 && result3 >= 0) || (result1 >= 0 && result2 < 0 && result3 < 0))
-        {
-            newPoint1 = ComputeIntersectionPoint(firstTrianglePoint - secondTrianglePoint, firstTrianglePoint); 
-            newPoint2 = ComputeIntersectionPoint(firstTrianglePoint - thirdTrianglePoint, firstTrianglePoint);
-        }
-        else if ((result1 >= 0 && result2 < 0 && result3 >= 0) || (result1 < 0 && result2 >= 0 && result3 < 0))
-        {
-            newPoint1 = ComputeIntersectionPoint(secondTrianglePoint - firstTrianglePoint, secondTrianglePoint); 
-            newPoint2 = ComputeIntersectionPoint(secondTrianglePoint - thirdTrianglePoint, secondTrianglePoint);
-        }
-        else if ((result1 >= 0 && result2 >= 0 && result3 < 0) || (result1 < 0 && result2 < 0 && result3 >= 0))
-        {
-            newPoint1 = ComputeIntersectionPoint(thirdTrianglePoint - secondTrianglePoint, thirdTrianglePoint); 
-            newPoint2 = ComputeIntersectionPoint(thirdTrianglePoint - firstTrianglePoint, thirdTrianglePoint);
-        }
-        
-        _potentialNewVertices.Add(newPoint1);
-        _potentialNewVertices.Add(newPoint2);
-    }*/
-    
-    //ready. old version higher
+    //ready
     private bool PrepareIntersectionPoints(int index)
     {
         int firstTriangleIndex = index - index % 3;
@@ -336,6 +301,7 @@ public class EnumeratorTest : MonoBehaviour
         _potentialNewVertices.Clear();
     }
 
+    //ready
     private List<int> GetAllTriangleIndices(List<int> vertexIndices)
     {
         List<int> result = new List<int>();
@@ -354,10 +320,11 @@ public class EnumeratorTest : MonoBehaviour
         return result;
     }
 
-    //ready
+    //TODO: поиск углубил, однако много повторных проверок треугольников
     private int GetNextVertexIndex(List<int> newVertices, List<int> checkedVertices)
     {
         int result = -1;
+        
         if (!newVertices.TrueForAll(checkedVertices.Contains))
         {
             for (int i = 0; i < newVertices.Count; i++)
@@ -367,33 +334,37 @@ public class EnumeratorTest : MonoBehaviour
                     result = _mesh.triangles[newVertices[i]];
                     break;
                 }
-                
             }
-            
-            /*for (int i = 0; i < similarVertices.Count; i++)
-            {
-                //находим индекс треугольника
-                int temp = FindFirstTriangleIndex(0, similarVertices[i]);
-                if (temp >= 0)
-                {
-                    //Находим индекс в массиве пересеченных треугольников
-                    if (indicesOfIntersectedTriangles.Contains(temp))
-                    {
-                        int triangleIndex = indicesOfIntersectedTriangles.IndexOf(temp);
-                        int firstTriangleIndex = temp - temp % 3;
 
-                        for (int j = 0; j < 3; j++)
-                        {
-                            if (indicesOfIntersectedTriangles[firstTriangleIndex + j] != triangleIndex)
-                                result = firstTriangleIndex + j;
-                        }
-                    }
-                }
-            }*/
+            
         }
         else
         {
-            cutReady = true;
+            for (int i = 0; i < checkedVertices.Count; i++)
+            {
+                List<int> list = GetAllTriangleIndices(FindSimilarVertexIndices(_mesh.vertices[_mesh.triangles[checkedVertices[i]]]));
+                if (!list.TrueForAll(checkedVertices.Contains))
+                {
+                    for (int j = 0; j < list.Count; j++)
+                    {
+                        if (!checkedVertices.Contains(list[j]))
+                        {
+                            result = _mesh.triangles[list[j]];
+                            break;
+                        }
+                    }
+                
+                    if (result != -1)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (result == -1)
+            {
+                cutReady = true;
+            }
         }
         
         return result;

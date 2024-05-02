@@ -12,10 +12,23 @@ public class ProjectileCreator : MonoBehaviour
 
     private void Awake()
     {
-       SpawnSpears();
-       SpawnRocks();
-       SpawnBombs();
-       SpawnPlates();
+        SpawnSpears();
+        SpawnRocks();
+        SpawnBombs();
+        SpawnPlates();
+    }
+
+    private void Update()
+    {
+        /*if (Input.GetKeyDown(KeyCode.I))
+        {
+            Move();
+        }*/
+
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            DestroyAll2();
+        }
     }
 
     private void SpawnSpears()
@@ -60,5 +73,18 @@ public class ProjectileCreator : MonoBehaviour
             q.eulerAngles = new Vector3(0f, 36 * i, 0);
             _projectiles[30+i] = Instantiate(plate, 10 * (q * Vector3.forward) + 14 * Vector3.up, q);
         }
+    }
+
+    private void DestroyAll2()
+    {
+        for (int  i = 0;  i < _projectiles.Length;  i++)
+        {
+            Destroy(_projectiles[i]);
+        }
+        
+        SpawnSpears();
+        SpawnRocks();
+        SpawnBombs();
+        SpawnPlates();
     }
 }
