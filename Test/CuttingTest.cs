@@ -16,7 +16,7 @@ public class EnumeratorTest : MonoBehaviour
     private MeshFilter _filter;
     private List<Vector3> _potentialNewVertices = new List<Vector3>();
     private List<Vector3> _approvedNewVertices = new List<Vector3>();
-    private List<int> indicesOfIntersectedTriangles = new List<int>();
+    List<int> checkedVertices = new List<int>();
     private bool cutReady;
 
     private void Start()
@@ -30,6 +30,7 @@ public class EnumeratorTest : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
+            checkedVertices.Clear();
             cutReady = false;
             Enumerate();
         }
@@ -38,7 +39,6 @@ public class EnumeratorTest : MonoBehaviour
     //ready
     private void Enumerate()
     {
-        List<int> checkedVertices = new List<int>();
         int nextVertexIndex = FindClosestVertex();
         List<int> temp = new List<int>();
         
@@ -50,12 +50,14 @@ public class EnumeratorTest : MonoBehaviour
             
             temp.AddRange(CheckTriangles(similarVertices));
 
-            nextVertexIndex = GetNextVertexIndex(temp, checkedVertices);
+            nextVertexIndex = GetNextVertexIndex(temp);
             
             checkedVertices.AddRange(temp); 
             checkedVertices = checkedVertices.Distinct().ToList();
             temp.Clear();
         }
+        
+        Debug.Log("END");
     }
 
     //ready
@@ -112,16 +114,11 @@ public class EnumeratorTest : MonoBehaviour
             {
                 if (temp >= 0)
                 {
-                    if (PrepareIntersectionPoints(temp) &&
-                        CheckIntersectedTriangle(similarVertexIndices[i]))
+                    if (PrepareIntersectionPoints(temp) && !GetTriangle(temp).TrueForAll(checkedVertices.Contains) /*&& CheckIntersectedTriangle(temp)*/)
                     {
                         ApproveIntersectionPoints();
 
-                        int index = temp - temp % 3; 
-                        for (int j = 0; j < 3; j++)
-                        {
-                            newVertices.Add(index + j);
-                        }
+                        newVertices.AddRange(GetTriangle(temp));
                     }
                 }    
             }
@@ -142,12 +139,6 @@ public class EnumeratorTest : MonoBehaviour
         }
 
         return -1;
-    }
-
-    //ready
-    private bool CheckIntersectedTriangle(int index)
-    {
-        return indicesOfIntersectedTriangles.FindIndex(p => p == index) < 0;
     }
 
     //ready
@@ -175,11 +166,6 @@ public class EnumeratorTest : MonoBehaviour
                 _potentialNewVertices.Add(newPoint1);
                 _potentialNewVertices.Add(newPoint2);
 
-                for (int j = 0; j < 3; j++)
-                {
-                    indicesOfIntersectedTriangles.Add(firstTriangleIndex+j);    
-                }
-                
                 return true;
             }
         }
@@ -282,23 +268,29 @@ public class EnumeratorTest : MonoBehaviour
     {
         for (int j = 0; j < _potentialNewVertices.Count; j++)
         {
-            int counter = 0;
             for (int i = 0; i < _potentialNewVertices.Count; i++)
             {
-                if (_potentialNewVertices[j] == _potentialNewVertices[i])
+                if (_potentialNewVertices[j] == _potentialNewVertices[i] && j != i)
                 {
-                    counter++;
+                    _potentialNewVertices.RemoveAll(p => p == _potentialNewVertices[j]);
                 }
-            }
-
-            if (counter > 1)
-            {
-                _potentialNewVertices.RemoveAll(p => p == _potentialNewVertices[j]);
             }
         }
 
         _approvedNewVertices.AddRange(_potentialNewVertices);
         _potentialNewVertices.Clear();
+    }
+
+    //ready
+    private List<int> GetTriangle(int triangleIndex)
+    {
+        List<int> result = new List<int>();
+        
+        result.Add(triangleIndex - triangleIndex%3);
+        result.Add(triangleIndex - triangleIndex%3 + 1);
+        result.Add(triangleIndex - triangleIndex%3 + 2);
+
+        return result;
     }
 
     //ready
@@ -320,8 +312,8 @@ public class EnumeratorTest : MonoBehaviour
         return result;
     }
 
-    //TODO: поиск углубил, однако много повторных проверок треугольников
-    private int GetNextVertexIndex(List<int> newVertices, List<int> checkedVertices)
+    //ready
+    private int GetNextVertexIndex(List<int> newVertices)
     {
         int result = -1;
         
@@ -335,8 +327,6 @@ public class EnumeratorTest : MonoBehaviour
                     break;
                 }
             }
-
-            
         }
         else
         {
@@ -347,7 +337,7 @@ public class EnumeratorTest : MonoBehaviour
                 {
                     for (int j = 0; j < list.Count; j++)
                     {
-                        if (!checkedVertices.Contains(list[j]))
+                        if (!checkedVertices.Contains(list[j]) && !GetTriangle(list[j]).TrueForAll(checkedVertices.Contains))
                         {
                             result = _mesh.triangles[list[j]];
                             break;
