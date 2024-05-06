@@ -6,7 +6,8 @@ using UnityEngine;
 
 public class EnumeratorTest : MonoBehaviour
 {
-    //Todo: надо отработать сценарий когда касание происходит в вершине. Довольно вероятный сценарий. 
+    //Todo: надо отработать сценарий когда касание происходит в вершине. Довольно вероятный сценарий.
+    //TODO: убрать вершины которые не существенны для разбиения
     
     private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
     private Vector3 _dirV = Vector3.right;
@@ -56,8 +57,6 @@ public class EnumeratorTest : MonoBehaviour
             checkedVertices = checkedVertices.Distinct().ToList();
             temp.Clear();
         }
-        
-        Debug.Log("END");
     }
 
     //ready
@@ -114,8 +113,9 @@ public class EnumeratorTest : MonoBehaviour
             {
                 if (temp >= 0)
                 {
-                    if (PrepareIntersectionPoints(temp) && !GetTriangle(temp).TrueForAll(checkedVertices.Contains) /*&& CheckIntersectedTriangle(temp)*/)
+                    if (!GetTriangle(temp).TrueForAll(checkedVertices.Contains) && PrepareIntersectionPoints(temp))
                     {
+                        Debug.Log("Approve Points");
                         ApproveIntersectionPoints();
 
                         newVertices.AddRange(GetTriangle(temp));
