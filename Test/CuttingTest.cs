@@ -41,22 +41,25 @@ public class EnumeratorTest : MonoBehaviour
     private void Enumerate()
     {
         int nextVertexIndex = FindClosestVertex();
-        List<int> temp = new List<int>();
+        List<int> curIterationCheckedVertices = new List<int>();
         
         for (;!cutReady;) 
         {
-            List<int> similarVertices = FindSimilarVertexIndices(_mesh.vertices[nextVertexIndex]);
-            checkedVertices.AddRange(GetAllTriangleIndices(similarVertices));
+            List<int> triangleIndicesOfCurrentVertices = GetAllTriangleIndices(FindSimilarVertexIndices(_mesh.vertices[nextVertexIndex]));
+            checkedVertices.AddRange(triangleIndicesOfCurrentVertices);
             checkedVertices = checkedVertices.Distinct().ToList();
             
-            temp.AddRange(CheckTriangles(similarVertices));
+            curIterationCheckedVertices.AddRange(CheckTriangles(ref triangleIndicesOfCurrentVertices));
+            ApproveIntersectionPoints(triangleIndicesOfCurrentVertices);
 
-            nextVertexIndex = GetNextVertexIndex(temp);
+            nextVertexIndex = GetNextVertexIndex(curIterationCheckedVertices);
             
-            checkedVertices.AddRange(temp); 
+            checkedVertices.AddRange(curIterationCheckedVertices); 
             checkedVertices = checkedVertices.Distinct().ToList();
-            temp.Clear();
+            curIterationCheckedVertices.Clear();
         }
+        
+        Debug.Log("END");
     }
 
     //ready
@@ -101,44 +104,22 @@ public class EnumeratorTest : MonoBehaviour
     }
 
     //ready
-    private List<int> CheckTriangles(List<int> similarVertexIndices)
+    private List<int> CheckTriangles(ref List<int> trianglesIndices)
     {
         List<int> newVertices = new List<int>();
-        
-        for (int i = 0; i < similarVertexIndices.Count; i++)
+        List<int> newTriangleIndices = new List<int>();
+         
+        for (int i = 0; i < trianglesIndices.Count; i++)
         {
-            for (int temp = FindFirstTriangleIndex(0, similarVertexIndices[i]);
-                 temp >= 0;
-                 temp = FindFirstTriangleIndex(temp+1, similarVertexIndices[i]))
+            if (!GetTriangle(trianglesIndices[i]).TrueForAll(checkedVertices.Contains) && PrepareIntersectionPoints(trianglesIndices[i]))
             {
-                if (temp >= 0)
-                {
-                    if (!GetTriangle(temp).TrueForAll(checkedVertices.Contains) && PrepareIntersectionPoints(temp))
-                    {
-                        Debug.Log("Approve Points");
-                        ApproveIntersectionPoints();
-
-                        newVertices.AddRange(GetTriangle(temp));
-                    }
-                }    
+                newVertices.AddRange(GetTriangle(trianglesIndices[i]));
+                newTriangleIndices.Add(trianglesIndices[i]);
             }
         }
 
+        trianglesIndices = newTriangleIndices;
         return newVertices;
-    }
-
-    //ready
-    private int FindFirstTriangleIndex(int startTriangleIndex, int vertexIndex)
-    {
-        for (int i = startTriangleIndex; i < _mesh.triangles.Length; i++)
-        {
-            if (vertexIndex == _mesh.triangles[i])
-            {
-                return i;
-            }
-        }
-
-        return -1;
     }
 
     //ready
@@ -264,21 +245,50 @@ public class EnumeratorTest : MonoBehaviour
     }
     
     //ready
-    private void ApproveIntersectionPoints()
+    private void ApproveIntersectionPoints(List<int> similarVertices)
     {
-        for (int j = 0; j < _potentialNewVertices.Count; j++)
+        for (int i = 0; i < similarVertices.Count-1; i++)
         {
-            for (int i = 0; i < _potentialNewVertices.Count; i++)
+            if (similarVertices[i + 1] - similarVertices[i] <= 3)
             {
-                if (_potentialNewVertices[j] == _potentialNewVertices[i] && j != i)
+                for (int j = 0; j < 2; j++)
                 {
-                    _potentialNewVertices.RemoveAll(p => p == _potentialNewVertices[j]);
+                    int temp1 = 2 * i + j;
+                    
+                    //Todo: index out of range. solve pls)
+                    bool canDeleteVertices = _potentialNewVertices[2 * i + j] == _potentialNewVertices[2 * i + 2] &&
+                                             AreDotsLieOnStraightLine(_potentialNewVertices[2 * i + j],
+                                                 _potentialNewVertices[2 * i + 3],
+                                                 _potentialNewVertices[2 * i + (j + 1) % 2]) ||
+                                             _potentialNewVertices[2 * i + j] == _potentialNewVertices[2 * i + 3] &&
+                                             AreDotsLieOnStraightLine(_potentialNewVertices[2 * i + j],
+                                                 _potentialNewVertices[2 * i + 2],
+                                                 _potentialNewVertices[2 * i + (j + 1) % 2]);
+
+
+                    if (canDeleteVertices)
+                    {
+                        Vector3 temp = _potentialNewVertices[2 * i + j];
+                        _potentialNewVertices.RemoveAll(p => p == temp);
+                    }
                 }
             }
         }
+        
 
         _approvedNewVertices.AddRange(_potentialNewVertices);
         _potentialNewVertices.Clear();
+    }
+
+    private bool AreDotsLieOnStraightLine(Vector3 sameVertex, Vector3 leftVertex, Vector3 rightVertex)
+    {
+        float temp = Vector3.Dot(leftVertex - sameVertex, rightVertex - sameVertex)/((leftVertex - sameVertex).magnitude * (rightVertex - sameVertex).magnitude);
+        if (temp >= 0.99f || temp <= -0.99f)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     //ready
