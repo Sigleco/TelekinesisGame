@@ -7,8 +7,7 @@ using UnityEngine;
 public class EnumeratorTest : MonoBehaviour
 {
     //Todo: надо отработать сценарий когда касание происходит в вершине. Довольно вероятный сценарий.
-    //TODO: убрать вершины которые не существенны для разбиения
-    
+
     private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
     private Vector3 _dirV = Vector3.right;
     private Vector3 _dirU = Vector3.up;
@@ -58,8 +57,6 @@ public class EnumeratorTest : MonoBehaviour
             checkedVertices = checkedVertices.Distinct().ToList();
             curIterationCheckedVertices.Clear();
         }
-        
-        Debug.Log("END");
     }
 
     //ready
@@ -141,11 +138,8 @@ public class EnumeratorTest : MonoBehaviour
             if ((tripleProducts[i%3] < 0 && tripleProducts[(i+1)%3] >= 0 && tripleProducts[(i+2)%3] >= 0) ||
                 (tripleProducts[i%3] >= 0 && tripleProducts[(i+1)%3] < 0 && tripleProducts[(i+2)%3] < 0))
             {
-                Vector3 newPoint1 = ComputeIntersectionPoint(trianglePoints[(i+1)%3], trianglePoints[i%3]); 
-                Vector3 newPoint2 = ComputeIntersectionPoint(trianglePoints[(i+2)%3], trianglePoints[i%3]);
-                
-                _potentialNewVertices.Add(newPoint1);
-                _potentialNewVertices.Add(newPoint2);
+                _potentialNewVertices.Add(ComputeIntersectionPoint(trianglePoints[(i+1)%3], trianglePoints[i%3]));
+                _potentialNewVertices.Add(ComputeIntersectionPoint(trianglePoints[(i+2)%3], trianglePoints[i%3]));
 
                 return true;
             }
@@ -188,10 +182,10 @@ public class EnumeratorTest : MonoBehaviour
             int a = 0, b = 0;
             for (int i = 0; i < 3; i++)
             {
-                //первый столбец
+                //first column
                 minor[0, 0] = matrix[(A+1)%3, (a+1)%3];
                 minor[1, 0] = matrix[(B+2)%3, (a+1)%3];
-                //второй столбец
+                //second column
                 minor[0, 1] = matrix[(A+1)%3, (b+2)%3];
                 minor[1, 1] = matrix[(B+2)%3, (b+2)%3];
 
@@ -247,15 +241,14 @@ public class EnumeratorTest : MonoBehaviour
     //ready
     private void ApproveIntersectionPoints(List<int> similarVertices)
     {
+        List<Vector3> extraVertices = new List<Vector3>();
         for (int i = 0; i < similarVertices.Count-1; i++)
         {
+            //this condition may cause a problem
             if (similarVertices[i + 1] - similarVertices[i] <= 3)
             {
                 for (int j = 0; j < 2; j++)
                 {
-                    int temp1 = 2 * i + j;
-                    
-                    //Todo: index out of range. solve pls)
                     bool canDeleteVertices = _potentialNewVertices[2 * i + j] == _potentialNewVertices[2 * i + 2] &&
                                              AreDotsLieOnStraightLine(_potentialNewVertices[2 * i + j],
                                                  _potentialNewVertices[2 * i + 3],
@@ -265,16 +258,21 @@ public class EnumeratorTest : MonoBehaviour
                                                  _potentialNewVertices[2 * i + 2],
                                                  _potentialNewVertices[2 * i + (j + 1) % 2]);
 
-
                     if (canDeleteVertices)
                     {
-                        Vector3 temp = _potentialNewVertices[2 * i + j];
-                        _potentialNewVertices.RemoveAll(p => p == temp);
+                        extraVertices.Add(_potentialNewVertices[2 * i + j]);
                     }
                 }
             }
         }
-        
+
+        if (extraVertices.Count > 0)
+        {
+            for (int i = 0; i < extraVertices.Count; i++)
+            {
+                _potentialNewVertices.RemoveAll(p => p == extraVertices[i]);
+            }
+        }
 
         _approvedNewVertices.AddRange(_potentialNewVertices);
         _potentialNewVertices.Clear();
