@@ -6,24 +6,23 @@ using UnityEngine;
 
 public class EnumeratorTest : MonoBehaviour
 {
-    //Todo: надо отработать сценарий когда касание происходит в вершине. Довольно вероятный сценарий.
-
     private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
     private Vector3 _dirV = Vector3.right;
     private Vector3 _dirU = Vector3.up;
     private Mesh _mesh;
-    private Vector3[] _vertices;
     private MeshFilter _filter;
-    private List<Vector3> _potentialNewVertices = new List<Vector3>();
-    private List<Vector3> _approvedNewVertices = new List<Vector3>();
-    List<int> checkedVertices = new List<int>();
+    private List<int> checkedVertices = new List<int>();
+    private List<AssociatedTriangle> _potentialVertices = new List<AssociatedTriangle>();
+    private List<AssociatedTriangle> _approvedVertices = new List<AssociatedTriangle>();
+    private Mesh leftMesh, rightMesh;
     private bool cutReady;
 
     private void Start()
     {
         _filter = gameObject.GetComponent<MeshFilter>();
         _mesh = _filter.mesh;
-        _vertices = _mesh.vertices;
+        leftMesh = new Mesh();
+        rightMesh = new Mesh();
     }
 
     private void Update()
@@ -32,7 +31,8 @@ public class EnumeratorTest : MonoBehaviour
         {
             checkedVertices.Clear();
             cutReady = false;
-            Enumerate();
+            //Enumerate();
+            SeparateVertices();
         }
     }
 
@@ -57,6 +57,7 @@ public class EnumeratorTest : MonoBehaviour
             checkedVertices = checkedVertices.Distinct().ToList();
             curIterationCheckedVertices.Clear();
         }
+        Debug.Log("");
     }
 
     //ready
@@ -138,16 +139,17 @@ public class EnumeratorTest : MonoBehaviour
             if ((tripleProducts[i%3] < 0 && tripleProducts[(i+1)%3] >= 0 && tripleProducts[(i+2)%3] >= 0) ||
                 (tripleProducts[i%3] >= 0 && tripleProducts[(i+1)%3] < 0 && tripleProducts[(i+2)%3] < 0))
             {
-                _potentialNewVertices.Add(ComputeIntersectionPoint(trianglePoints[(i+1)%3], trianglePoints[i%3]));
-                _potentialNewVertices.Add(ComputeIntersectionPoint(trianglePoints[(i+2)%3], trianglePoints[i%3]));
-
+                int[] temp = new int [3] {firstTriangleIndex, firstTriangleIndex + 1, firstTriangleIndex + 2};
+                _potentialVertices.Add(new AssociatedTriangle(ComputeIntersectionPoint(trianglePoints[(i+1)%3], trianglePoints[i%3]), temp));
+                _potentialVertices.Add(new AssociatedTriangle(ComputeIntersectionPoint(trianglePoints[(i+2)%3], trianglePoints[i%3]), temp));
+                
                 return true;
             }
         }
 
         return false;
     }
-    
+
     //ready
     private Vector3 ComputeIntersectionPoint(Vector3 firstVertex, Vector3 secondVertex)
     {
@@ -249,18 +251,18 @@ public class EnumeratorTest : MonoBehaviour
             {
                 for (int j = 0; j < 2; j++)
                 {
-                    bool canDeleteVertices = _potentialNewVertices[2 * i + j] == _potentialNewVertices[2 * i + 2] &&
-                                             AreDotsLieOnStraightLine(_potentialNewVertices[2 * i + j],
-                                                 _potentialNewVertices[2 * i + 3],
-                                                 _potentialNewVertices[2 * i + (j + 1) % 2]) ||
-                                             _potentialNewVertices[2 * i + j] == _potentialNewVertices[2 * i + 3] &&
-                                             AreDotsLieOnStraightLine(_potentialNewVertices[2 * i + j],
-                                                 _potentialNewVertices[2 * i + 2],
-                                                 _potentialNewVertices[2 * i + (j + 1) % 2]);
+                    bool canDeleteVertices = _potentialVertices[2 * i + j].GetVertexPosition() == _potentialVertices[2 * i + 2].GetVertexPosition() &&
+                                             AreDotsLieOnStraightLine(_potentialVertices[2 * i + j].GetVertexPosition(),
+                                                 _potentialVertices[2 * i + 3].GetVertexPosition(),
+                                                 _potentialVertices[2 * i + (j + 1) % 2].GetVertexPosition()) ||
+                                             _potentialVertices[2 * i + j].GetVertexPosition() == _potentialVertices[2 * i + 3].GetVertexPosition() &&
+                                             AreDotsLieOnStraightLine(_potentialVertices[2 * i + j].GetVertexPosition(),
+                                                 _potentialVertices[2 * i + 2].GetVertexPosition(),
+                                                 _potentialVertices[2 * i + (j + 1) % 2].GetVertexPosition());
 
                     if (canDeleteVertices)
                     {
-                        extraVertices.Add(_potentialNewVertices[2 * i + j]);
+                        extraVertices.Add(_potentialVertices[2 * i + j].GetVertexPosition());
                     }
                 }
             }
@@ -270,14 +272,15 @@ public class EnumeratorTest : MonoBehaviour
         {
             for (int i = 0; i < extraVertices.Count; i++)
             {
-                _potentialNewVertices.RemoveAll(p => p == extraVertices[i]);
+                _potentialVertices.RemoveAll(p => p.GetVertexPosition() == extraVertices[i]);
             }
         }
 
-        _approvedNewVertices.AddRange(_potentialNewVertices);
-        _potentialNewVertices.Clear();
+        _approvedVertices.AddRange(_potentialVertices);
+        _potentialVertices.Clear();
     }
 
+    //ready
     private bool AreDotsLieOnStraightLine(Vector3 sameVertex, Vector3 leftVertex, Vector3 rightVertex)
     {
         float temp = Vector3.Dot(leftVertex - sameVertex, rightVertex - sameVertex)/((leftVertex - sameVertex).magnitude * (rightVertex - sameVertex).magnitude);
@@ -366,5 +369,89 @@ public class EnumeratorTest : MonoBehaviour
         }
         
         return result;
+    }
+
+    private void PrepareMeshesData()
+    {
+        SeparateVertices();
+        SetTriangles();
+    }
+
+    private void SeparateVertices()
+    {
+        List<Vector3> leftVertices = new List<Vector3>(), rightVertices = new List<Vector3>();
+        List<int> leftVertexIndices = new List<int>(), rightVertexIndices = new List<int>();
+        Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
+
+        for (int i = 0; i < _mesh.vertices.Length; i++)
+        {
+            if(Vector3.Dot(crossProduct, _contactPoint + _mesh.vertices[i]) / crossProduct.magnitude < 0)
+            {
+                leftVertices.Add(_mesh.vertices[i]);
+                leftVertexIndices.Add(i);
+            }
+            else
+            {
+                rightVertices.Add(_mesh.vertices[i]);
+                rightVertexIndices.Add(i);
+            }
+        }
+
+        PrepareNewMesh(leftVertices, leftVertexIndices, _approvedVertices);
+        PrepareNewMesh(rightVertices, rightVertexIndices, _approvedVertices);
+        
+        leftMesh.vertices = leftVertices.ToArray();
+        rightMesh.vertices = rightVertices.ToArray();
+    }
+
+    private void SetTriangles()
+    {
+        Vector3[] vertices = leftMesh.vertices;
+        List<int> leftTriangles = new List<int>(), rightTriangles = new List<int>();
+        for (int i = 0; i < _mesh.triangles.Length; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                /*if (leftMesh.vertices.)
+                {
+                    
+                }
+                */
+            }
+        }
+    }
+
+    private void PrepareNewMesh(List<Vector3> vertices, List<int> indices, List<AssociatedTriangle> sectionPoints)
+    {
+        Vector3[] finalVertices = new Vector3[(int) (sectionPoints.Count * 2.5f)];
+        for (int i = 0; i < vertices.Count; i++)
+        {
+            finalVertices[indices[i]] = vertices[i];
+        }
+
+        List<List<int>> triangles = new List<List<int>>();
+        for (int i = 0; i < indices.Count; i++)
+        {
+            for (int j = 0; j < _mesh.triangles.Length; j++)
+            {
+                if (indices[i] == _mesh.triangles[j]) triangles.Add(GetTriangle(j));
+            }
+
+            for (int j = 0; j < triangles.Count; j++)
+            {
+                if (!triangles[j].TrueForAll(indices.Contains))
+                {
+                    for (int k = 0; k < sectionPoints.Count; k++)
+                    { 
+                        if (sectionPoints[k].GetTriangle() == triangles[j].ToArray())
+                        {
+                            //TODO
+                            //выбрать вершину, которую необходимо поставить 
+                            //понять как расположить точки в правильном направлении
+                        }
+                    }
+                }
+            }
+        }
     }
 }
