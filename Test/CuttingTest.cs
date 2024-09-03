@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using UnityEngine;
 
 public class EnumeratorTest : MonoBehaviour
@@ -31,7 +32,7 @@ public class EnumeratorTest : MonoBehaviour
         {
             checkedVertices.Clear();
             cutReady = false;
-            //Enumerate();
+            Enumerate();
             SeparateVertices();
         }
     }
@@ -44,7 +45,7 @@ public class EnumeratorTest : MonoBehaviour
         
         for (;!cutReady;) 
         {
-            List<int> triangleIndicesOfCurrentVertices = GetAllTriangleIndices(FindSimilarVertexIndices(_mesh.vertices[nextVertexIndex]));
+            List<int> triangleIndicesOfCurrentVertices = GetAllTriangleStartIndices(FindSimilarVertexIndices(_mesh.vertices[nextVertexIndex]));
             checkedVertices.AddRange(triangleIndicesOfCurrentVertices);
             checkedVertices = checkedVertices.Distinct().ToList();
             
@@ -305,7 +306,7 @@ public class EnumeratorTest : MonoBehaviour
     }
 
     //ready
-    private List<int> GetAllTriangleIndices(List<int> vertexIndices)
+    private List<int> GetAllTriangleStartIndices(List<int> vertexIndices)
     {
         List<int> result = new List<int>();
 
@@ -317,6 +318,21 @@ public class EnumeratorTest : MonoBehaviour
                 {
                     result.Add(j);
                 }
+            }
+        }
+
+        return result;
+    }
+    
+    private List<int> GetAllTriangleStartIndices(int vertexIndex)
+    {
+        List<int> result = new List<int>();
+
+        for (int j = 0; j < _mesh.triangles.Length; j++)
+        {
+            if (vertexIndex == _mesh.triangles[j])
+            {
+                result.Add(j);
             }
         }
 
@@ -343,7 +359,7 @@ public class EnumeratorTest : MonoBehaviour
         {
             for (int i = 0; i < checkedVertices.Count; i++)
             {
-                List<int> list = GetAllTriangleIndices(FindSimilarVertexIndices(_mesh.vertices[_mesh.triangles[checkedVertices[i]]]));
+                List<int> list = GetAllTriangleStartIndices(FindSimilarVertexIndices(_mesh.vertices[_mesh.triangles[checkedVertices[i]]]));
                 if (!list.TrueForAll(checkedVertices.Contains))
                 {
                     for (int j = 0; j < list.Count; j++)
@@ -374,7 +390,7 @@ public class EnumeratorTest : MonoBehaviour
     private void PrepareMeshesData()
     {
         SeparateVertices();
-        SetTriangles();
+        //SetTriangles();
     }
 
     private void SeparateVertices()
@@ -397,9 +413,10 @@ public class EnumeratorTest : MonoBehaviour
             }
         }
 
-        PrepareNewMesh(leftVertices, leftVertexIndices, _approvedVertices);
-        PrepareNewMesh(rightVertices, rightVertexIndices, _approvedVertices);
-        
+        //PrepareNewMesh(leftVertices, leftVertexIndices, _approvedVertices);
+        //PrepareNewMesh(rightVertices, rightVertexIndices, _approvedVertices);
+        CreateNewMesh(leftVertices, leftVertexIndices, _approvedVertices);
+
         leftMesh.vertices = leftVertices.ToArray();
         rightMesh.vertices = rightVertices.ToArray();
     }
@@ -421,37 +438,298 @@ public class EnumeratorTest : MonoBehaviour
         }
     }
 
-    private void PrepareNewMesh(List<Vector3> vertices, List<int> indices, List<AssociatedTriangle> sectionPoints)
+    private void CreateNewMesh(List<Vector3> vertices, List<int> indices, List<AssociatedTriangle> sectionPoints)
     {
-        Vector3[] finalVertices = new Vector3[(int) (sectionPoints.Count * 2.5f)];
-        for (int i = 0; i < vertices.Count; i++)
-        {
-            finalVertices[indices[i]] = vertices[i];
-        }
-
-        List<List<int>> triangles = new List<List<int>>();
+        Vector3[] vertexArray = new Vector3[24];
+        int[] newTriangleIndices = new int[36];
         for (int i = 0; i < indices.Count; i++)
         {
-            for (int j = 0; j < _mesh.triangles.Length; j++)
-            {
-                if (indices[i] == _mesh.triangles[j]) triangles.Add(GetTriangle(j));
-            }
+            vertexArray[indices[i]] = vertices[i];
 
-            for (int j = 0; j < triangles.Count; j++)
+        }
+
+        for (int i = 0; i < _mesh.triangles.Length; i++)
+        {
+            if (indices.Contains(_mesh.triangles[i]))
             {
-                if (!triangles[j].TrueForAll(indices.Contains))
+                newTriangleIndices[i] = _mesh.triangles[i];
+            }
+            else
+            {
+                newTriangleIndices[i] = -1;
+            }
+        }
+        
+        for (int i = 0; i < newTriangleIndices.Length; i += 3)
+        {
+            if (newTriangleIndices[i] != -1 && newTriangleIndices[i + 1] != -1 && newTriangleIndices[i + 2] != -1 ||
+                newTriangleIndices[i] == -1 && newTriangleIndices[i + 1] == -1 && newTriangleIndices[i + 2] == -1)
+            {
+                continue;
+            }
+            else if(newTriangleIndices[i] == -1 && newTriangleIndices[i + 1] != -1 && newTriangleIndices[i + 2] != -1 ||
+                    newTriangleIndices[i] != -1 && newTriangleIndices[i + 1] == -1 && newTriangleIndices[i + 2] != -1 ||
+                    newTriangleIndices[i] != -1 && newTriangleIndices[i + 1] != -1 && newTriangleIndices[i + 2] == -1)
+            {
+                //check if triangle should add 2 section points to 1 empty triangle slot
+                
+            }
+            else if(newTriangleIndices[i] == -1 && newTriangleIndices[i + 1] == -1 && newTriangleIndices[i + 2] != -1 ||
+                    newTriangleIndices[i] != -1 && newTriangleIndices[i + 1] == -1 && newTriangleIndices[i + 2] == -1 ||
+                    newTriangleIndices[i] == -1 && newTriangleIndices[i + 1] != -1 && newTriangleIndices[i + 2] == -1)
+            {
+                int keyVertexIndex = -1;
+                int keyTriangleIndex = -1;
+                for (int j = 0; j < 3; j++)
                 {
-                    for (int k = 0; k < sectionPoints.Count; k++)
-                    { 
-                        if (sectionPoints[k].GetTriangle() == triangles[j].ToArray())
+                    if (newTriangleIndices[i+j] != -1)
+                    {
+                        keyVertexIndex = newTriangleIndices[i+j];
+                        keyTriangleIndex = i + j;
+                    }    
+                }
+
+                int nextTriangleIndex = FindAdjacentTriangleIndex(keyVertexIndex, newTriangleIndices);
+                int newVertexIndex = -1;
+                int newTriangleIndex = 0;
+                if (nextTriangleIndex != -1)
+                {
+                    InsertNewVertex(sectionPoints, nextTriangleIndex, newTriangleIndices, vertexArray, ref newVertexIndex, ref newTriangleIndex);
+
+                    if (newVertexIndex != -1)
+                    {
+                        //023 302 230
+                        //0   -1  -2
+                        //031 103 310
+                        //0   -1  -2
+                        int nullIndexOffset = 3 - (3 - nextTriangleIndex % 3 + newTriangleIndex % 3) % 3;
+                        int newIndexOffset = (keyTriangleIndex % 3 + nullIndexOffset)%3;
+                        newTriangleIndices[keyTriangleIndex - keyTriangleIndex%3 + newIndexOffset]= newVertexIndex;
+
+                        for (int m = 0;  m < 3; m++)
                         {
-                            //TODO
-                            //выбрать вершину, которую необходимо поставить 
-                            //понять как расположить точки в правильном направлении
+                            if (newTriangleIndices[i+m] == -1)
+                            {
+                                InsertNewVertex(sectionPoints, i+m, newTriangleIndices, vertexArray, ref newVertexIndex, ref newTriangleIndex);
+                            }
                         }
                     }
                 }
             }
         }
+
+        Debug.Log("Done");
+    }
+
+    private void InsertNewVertex(List<AssociatedTriangle> sectionPoints, int wantedTriangleIndex, int[]newTriangleIndices, Vector3[] vertexArray, ref int newVertexIndex, ref int newTriangleIndex)
+    {
+        for(int j = 0; j < sectionPoints.Count; j++)
+        {
+            bool isVertexSetted = false;
+            if (sectionPoints[j].GetTriangle().Contains(wantedTriangleIndex))
+            {
+                int temp = wantedTriangleIndex - wantedTriangleIndex % 3;
+                for (int k = 0; k < 3; k++)
+                {
+                    if (newTriangleIndices[temp + k] == -1)
+                    {
+                        newVertexIndex = SetNewVertex(vertexArray, sectionPoints[j].GetVertexPosition());
+                        if (temp != -1)
+                        {
+                            newTriangleIndices[temp + k] = newVertexIndex;
+                            newTriangleIndex = temp + k;
+                            isVertexSetted = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (isVertexSetted)
+            {
+                break;
+            }
+        }
+    }
+
+    private int FindAdjacentTriangleIndex(int keyValueIndex, int[] triangles)
+    {
+        for (int j = 0; j < triangles.Length; j += 3)
+        {
+            if(triangles[j] == -1 && triangles[j + 1] != -1 && triangles[j + 2] != -1 ||
+                    triangles[j] != -1 && triangles[j + 1] == -1 && triangles[j + 2] != -1 ||
+                    triangles[j] != -1 && triangles[j + 1] != -1 && triangles[j + 2] == -1)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    if (triangles[j+i] == keyValueIndex)
+                    {
+                        return j+i;
+                    }
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    private int SetNewVertex(Vector3[] array, Vector3 point)
+    {
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (array[i] == Vector3.zero)
+            {
+                array[i] = point;
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private void PrepareNewMesh(List<Vector3> vertices, List<int> indices, List<AssociatedTriangle> sectionPoints)
+    {
+        //создаем массивы для финальных значений
+        int counter = 0;
+        Vector3[] finalVertices = new Vector3[indices.Count + (int) (sectionPoints.Count * 1.5f)];
+        List<int> finalTriangles = new List<int>();
+
+        //заполняем массив финальных значений с начала без пропусков старыми врешинами
+        for (int i = 0; i < indices.Count; i++)
+        {
+            finalVertices[i] = vertices[i];
+            counter++;
+        }
+
+        List<List<int>> trianglesIndices = new List<List<int>>();
+
+        //Цикл который проверяет наличие у каждой вершины полных треугольников
+        for (int i = 0; i < indices.Count; i++)
+        {
+            trianglesIndices.Clear();
+            
+            //выбираем индексы треугольников, в которые входит выбранная вершина
+            for (int j = 0; j < _mesh.triangles.Length; j++)
+            {
+                if (indices[i] == _mesh.triangles[j])
+                {
+                    trianglesIndices.Add(GetTriangle(j));
+                }
+            }
+            
+            //цикл для добавления треугольников в финальный массив и дополнения недостающих треугольников вершинами
+            List<int> triangle = new List<int>();
+            for (int j = 0; j < trianglesIndices.Count; j++)
+            {
+                //todo: необходима проверка на повтор треугольника
+
+                //переводим индексы треугольников в значения 
+                triangle.Clear();
+                for (int ind = 0; ind < 3; ind++)
+                {
+                    triangle.Add(_mesh.triangles[trianglesIndices[j][ind]]);    
+                }
+
+                //перебирает возможные варианты пересечения треугольника и добавляет в него вершины
+                switch (SectionCase(triangle, indices))
+                {
+                    //треугольник полностью есть в старых вершинах
+                    case 1:
+                        for (int ind = 0; ind < indices.Count; ind++)
+                        {
+                            if (triangle.Contains(indices[ind]))
+                            {
+                                finalTriangles.Add(ind);
+                            }
+                        }
+                        break;
+                    //не хватает одной вершины
+                    case  0:
+                        for (int ind = 0; ind < sectionPoints.Count; ind++)
+                        {
+                            if (triangle.ToArray() == sectionPoints[ind].GetTriangle())
+                            {
+                                for (int temp = 0; temp < 3; temp++)
+                                {
+                                    if (!indices.Contains(triangle[temp]))
+                                    {
+                                        finalVertices[counter] = sectionPoints[ind].GetVertexPosition();
+                                        finalTriangles.Add(counter);
+                                        counter++;
+                                    }
+                                    else
+                                    {
+                                        finalTriangles.Add(triangle[temp]);
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+                        break;
+                    //не хватает двух вершин 
+                    case -1:
+                        for (int ind = 0; ind < sectionPoints.Count; ind++)
+                        {
+                            if (triangle.ToArray() == sectionPoints[ind].GetTriangle())
+                            {
+                                int temp;
+                                int[] tempTriangle = new int[3];
+                                for (temp = 0; temp < 3; temp++)
+                                {
+                                    if (indices.Contains(triangle[temp]))
+                                    {
+                                        tempTriangle[temp] = triangle[temp];
+                                    }
+                                }
+
+                                finalVertices[counter] = sectionPoints[ind].GetVertexPosition();
+                                triangle[(temp + 1) % 3] = counter;
+                                counter++;
+
+                                for (int index = 0; index < sectionPoints.Count; index++)
+                                {
+                                    if (sectionPoints[index].IsAdjacentTriangle(triangle.ToArray()))
+                                    {
+                                        finalVertices[counter] = sectionPoints[ind].GetVertexPosition();
+                                        triangle[(temp + 2) % 3] = counter;
+                                        counter++;
+                                        finalTriangles.AddRange(tempTriangle);
+                                        break;
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+    }
+
+    private int SectionCase(List<int> triangle, List<int> indices)
+    {
+        int result = 0;
+        bool a = indices.Contains(triangle[0]);
+        bool b = indices.Contains(triangle[1]);
+        bool c = indices.Contains(triangle[2]);
+
+        if (a && b && c)
+        {
+            return 1;
+        }
+        else if (a && b && !c || a && !b && c || !a && b && c)
+        {
+            return 0;
+        }
+        else if (a && !b && !c || !a && !b && c || !a && b && !c)
+        {
+            return -1;
+        }
+
+        return result;
     }
 }
+
+
