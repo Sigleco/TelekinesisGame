@@ -37,6 +37,10 @@ public class EnumeratorTest : MonoBehaviour
         }
     }
 
+    private void HamSlice()
+    {
+    }
+
     //ready
     private void Enumerate()
     {
