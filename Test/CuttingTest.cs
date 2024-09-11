@@ -28,19 +28,68 @@ public class EnumeratorTest : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        /*if (Input.GetKeyDown(KeyCode.Space))
         {
             checkedVertices.Clear();
             cutReady = false;
             Enumerate();
             SeparateVertices();
+        }*/
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Divide();
         }
     }
 
-    private void HamSlice()
+    private void Divide()
     {
+        List<int> unUsedVertices = Enumerable.Range(1, _mesh.vertices.Length).ToList();
+        while (unUsedVertices.Count > 0)
+        {
+            DivideSide(unUsedVertices);
+        }
     }
 
+    private void DivideSide(List<int> unUsedVertices)
+    {
+        FindSide(unUsedVertices);
+    }
+
+    private void FindSide(List<int> unUsedVertices)
+    {
+        List<int> sideVertices = new List<int>();
+        sideVertices.Add(unUsedVertices[0]);
+        unUsedVertices.Remove(sideVertices[0]);
+
+        CheckNextGenDots(sideVertices, unUsedVertices, 0,  1);
+    }
+
+    private void CheckNextGenDots(List<int> sideVertices, List<int> unUsedVertices, int startIndex, int amountToCheck)
+    {
+        for (int j = startIndex; j < amountToCheck; j++)
+        {
+            for (int i = 0; i < _mesh.triangles.Length; i++)
+            {
+                if (sideVertices[j] == _mesh.triangles[i])
+                {
+                    sideVertices.AddRange(GetTriangle(i));
+                }
+            }
+        }
+
+        int rawSize = sideVertices.Count;
+        sideVertices = sideVertices.Distinct().ToList();
+        if (rawSize != sideVertices.Count)
+        {
+            startIndex += amountToCheck;
+            int temp = sideVertices.Count - startIndex;
+            CheckNextGenDots(sideVertices, unUsedVertices, startIndex, temp);
+        }
+    }
+
+    /// <summary>
+    /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// </summary>
     //ready
     private void Enumerate()
     {
