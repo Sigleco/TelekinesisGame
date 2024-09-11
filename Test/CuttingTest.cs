@@ -62,6 +62,7 @@ public class EnumeratorTest : MonoBehaviour
         unUsedVertices.Remove(sideVertices[0]);
 
         CheckNextGenDots(sideVertices, unUsedVertices, 0,  1);
+        unUsedVertices.RemoveAll(x => sideVertices.Contains(x));
     }
 
     private void CheckNextGenDots(List<int> sideVertices, List<int> unUsedVertices, int startIndex, int amountToCheck)
@@ -72,7 +73,11 @@ public class EnumeratorTest : MonoBehaviour
             {
                 if (sideVertices[j] == _mesh.triangles[i])
                 {
-                    sideVertices.AddRange(GetTriangle(i));
+                    List<int> triangle = GetTriangle(i);
+                    foreach (int vert in triangle)
+                    {
+                        sideVertices.Add(_mesh.triangles[vert]);
+                    }
                 }
             }
         }
