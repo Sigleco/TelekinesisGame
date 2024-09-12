@@ -43,7 +43,7 @@ public class EnumeratorTest : MonoBehaviour
 
     private void Divide()
     {
-        List<int> unUsedVertices = Enumerable.Range(1, _mesh.vertices.Length).ToList();
+        List<int> unUsedVertices = Enumerable.Range(0, _mesh.vertices.Length).ToList();
         while (unUsedVertices.Count > 0)
         {
             DivideSide(unUsedVertices);
@@ -55,17 +55,17 @@ public class EnumeratorTest : MonoBehaviour
         FindSide(unUsedVertices);
     }
 
-    private void FindSide(List<int> unUsedVertices)
+    private void FindSide(List<int> unusedVertices)
     {
         List<int> sideVertices = new List<int>();
-        sideVertices.Add(unUsedVertices[0]);
-        unUsedVertices.Remove(sideVertices[0]);
+        sideVertices.Add(unusedVertices[0]);
+        unusedVertices.Remove(sideVertices[0]);
 
-        CheckNextGenDots(sideVertices, unUsedVertices, 0,  1);
-        unUsedVertices.RemoveAll(x => sideVertices.Contains(x));
+        CheckNextGenDots(ref sideVertices,  0,  1);
+        unusedVertices.RemoveAll(x => sideVertices.Contains(x));
     }
 
-    private void CheckNextGenDots(List<int> sideVertices, List<int> unUsedVertices, int startIndex, int amountToCheck)
+    private void CheckNextGenDots(ref List<int> sideVertices, int startIndex, int amountToCheck)
     {
         for (int j = startIndex; j < amountToCheck; j++)
         {
@@ -88,7 +88,7 @@ public class EnumeratorTest : MonoBehaviour
         {
             startIndex += amountToCheck;
             int temp = sideVertices.Count - startIndex;
-            CheckNextGenDots(sideVertices, unUsedVertices, startIndex, temp);
+            CheckNextGenDots( ref sideVertices,  startIndex, temp);
         }
     }
 
