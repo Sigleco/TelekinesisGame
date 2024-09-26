@@ -13,6 +13,7 @@ public class EnumeratorTest : MonoBehaviour
     private Mesh _mesh;
     private MeshFilter _filter;
     private List<int> checkedVertices = new List<int>();
+    private List<Vector3> checkedVectors = new List<Vector3>();
     private List<AssociatedTriangle> _potentialVertices = new List<AssociatedTriangle>();
     private List<AssociatedTriangle> _approvedVertices = new List<AssociatedTriangle>();
     private Mesh leftMesh, rightMesh;
@@ -52,10 +53,11 @@ public class EnumeratorTest : MonoBehaviour
 
     private void DivideSide(List<int> unUsedVertices)
     {
-        FindSide(unUsedVertices);
+        List<int> side = FindSide(unUsedVertices);
+        SeparateSide(side);
     }
 
-    private void FindSide(List<int> unusedVertices)
+    private List<int> FindSide(List<int> unusedVertices)
     {
         List<int> sideVertices = new List<int>();
         sideVertices.Add(unusedVertices[0]);
@@ -63,6 +65,7 @@ public class EnumeratorTest : MonoBehaviour
 
         CheckNextGenDots(ref sideVertices,  0,  1);
         unusedVertices.RemoveAll(x => sideVertices.Contains(x));
+        return sideVertices;
     }
 
     private void CheckNextGenDots(ref List<int> sideVertices, int startIndex, int amountToCheck)
@@ -89,6 +92,128 @@ public class EnumeratorTest : MonoBehaviour
             startIndex += amountToCheck;
             int temp = sideVertices.Count - startIndex;
             CheckNextGenDots( ref sideVertices,  startIndex, temp);
+        }
+    }
+    
+    private void SeparateSide(List<int> side)
+    {
+        Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
+        Vector3 newVertex1 = Vector3.zero, newVertex2 = Vector3.zero;
+
+        List<(int, float)> left = new List<(int, float)>();
+        List<(int, float)> right = new List<(int, float)>();
+        
+        for (int i = 0; i < side.Count; i++)
+        {
+            float temp = Vector3.Dot(crossProduct, _contactPoint + _mesh.vertices[side[i]]) / crossProduct.magnitude;
+            if (temp >= 0)
+            {
+                left.Add((side[i], temp));
+            }
+            else
+            {
+                right.Add((side[i], temp));
+            }
+        }
+
+        left.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
+        right.Sort((p1, p2) => -1 * p1.Item2.CompareTo(p2.Item2));
+
+        if (left.Count > 1 && right.Count > 1)
+        {
+            left.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
+            right.Sort((p1, p2) => -1 * p1.Item2.CompareTo(p2.Item2));
+            
+            Vector3 vec1 = ComputeIntersectionPoint(_mesh.vertices[left[0].Item1], _mesh.vertices[right[0].Item1]);
+            Vector3 vec2 = ComputeIntersectionPoint(_mesh.vertices[left[0].Item1], _mesh.vertices[right[1].Item1]);
+            Vector3 vec3 = ComputeIntersectionPoint(_mesh.vertices[left[1].Item1], _mesh.vertices[right[0].Item1]);
+            Vector3 vec4 = ComputeIntersectionPoint(_mesh.vertices[left[1].Item1], _mesh.vertices[right[1].Item1]);
+
+            float dot1 = Vector3.Dot(vec1, vec2);
+            float dot2 = Vector3.Dot(vec1, vec3);
+            float dot3 = Vector3.Dot(vec1, vec4);
+        
+            List<float> fl = new List<float>(){dot1, dot2, dot3};
+            List<Vector3> points = new List<Vector3>(){vec1, vec2, vec3, vec4};
+
+            if (dot1 > 0 && dot2 > 0 && dot3 > 0)
+            {
+                newVertex1 = vec1;
+                newVertex2 = points[fl.IndexOf(fl.Max()) + 1];
+            }
+            else if (-dot1 > 0 && -dot2 > 0 && -dot3 > 0)
+            {
+                newVertex1 = vec1;
+                newVertex2 = points[fl.IndexOf(fl.Min()) + 1];
+            }
+            else
+            {
+                newVertex1 = points[fl.IndexOf(fl.Max()) + 1];
+                newVertex2 = points[fl.IndexOf(fl.Min()) + 1];
+            }
+        }
+        else if (left.Count == 1)
+        {
+            right.Sort((p1, p2) => -1 * p1.Item2.CompareTo(p2.Item2));
+            newVertex1 = ComputeIntersectionPoint(_mesh.vertices[left[0].Item1], _mesh.vertices[right[0].Item1]);
+            newVertex2 = ComputeIntersectionPoint(_mesh.vertices[left[0].Item1], _mesh.vertices[right[1].Item1]);
+        }
+        else if(right.Count == 1)
+        {
+            left.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
+            newVertex1 = ComputeIntersectionPoint(_mesh.vertices[right[0].Item1], _mesh.vertices[left[0].Item1]);
+            newVertex2 = ComputeIntersectionPoint(_mesh.vertices[right[0].Item1], _mesh.vertices[left[1].Item1]);
+        }
+
+        int[] leftTriangles = CreateTriangles(left, newVertex1, newVertex2);
+        int[] rightTriangles = CreateTriangles(right, newVertex1, newVertex2);
+        
+        CreateNewMesh(leftTriangles, left.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+        CreateNewMesh(rightTriangles, right.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+        checkedVectors.Add(newVertex1);
+        checkedVectors.Add(newVertex2);
+    }
+
+    private int[] CreateTriangles(List<(int, float)> oldVertexIndices, Vector3 newVertex1, Vector3 newVertex2)
+    {
+        Vector3 sideNormal = _mesh.normals[oldVertexIndices[0].Item1];
+        Vector3 mainLine = newVertex1 - newVertex2;
+        float[] dots = new float[oldVertexIndices.Count];
+        int[] triangles = new int[oldVertexIndices.Count * 3];
+        for (int i = 0; i < oldVertexIndices.Count; i++)
+        {
+            oldVertexIndices[i] = (oldVertexIndices[i].Item1,Vector3.SignedAngle(mainLine, newVertex1 - _mesh.vertices[oldVertexIndices[i].Item1], sideNormal));
+        }
+        
+        oldVertexIndices.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
+
+        //triangles[0] = newVertex1;
+        //triangles[1] = newVertex2;
+        triangles[2] = oldVertexIndices[0].Item1;
+        
+        for (int i = 1; i < oldVertexIndices.Count; i++)
+        {
+            triangles[3 * i + 1] = oldVertexIndices[i].Item1;
+            triangles[3 * i + 2] = oldVertexIndices[i + 1].Item1;
+        }
+
+        return triangles;
+    }
+
+    private void CreateNewMesh(int[] triangles, List<int> vertices, Vector3 newVertex1, Vector3 newVertex2)
+    {
+        Vector3 normal = _mesh.normals[vertices[0]];
+        Vector3 tangent = _mesh.tangents[vertices[0]];
+        List<Vector3> newVertices = new List<Vector3>();
+        newVertices.AddRange(vertices.ConvertAll(x=> _mesh.vertices[x]));
+        newVertices.Add(newVertex1);
+        newVertices.Add(newVertex2);
+        triangles[0] = newVertices.IndexOf(newVertex1);
+        triangles[1] = newVertices.IndexOf(newVertex2);
+
+        for (int i = 3; i < triangles.Length; i=+3)
+        {
+            triangles[i] = triangles[0];
         }
     }
 
