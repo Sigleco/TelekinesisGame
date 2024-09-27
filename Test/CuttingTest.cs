@@ -165,11 +165,27 @@ public class EnumeratorTest : MonoBehaviour
             newVertex2 = ComputeIntersectionPoint(_mesh.vertices[right[0].Item1], _mesh.vertices[left[1].Item1]);
         }
 
-        int[] leftTriangles = CreateTriangles(left, newVertex1, newVertex2);
-        int[] rightTriangles = CreateTriangles(right, newVertex1, newVertex2);
+        if (left.Count > 0 && right.Count == 0)
+        {
+            int[] leftTriangles = CreateTriangles(left);
+            CreateNewMesh(leftTriangles, left.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+        }
         
-        CreateNewMesh(leftTriangles, left.ConvertAll(x => x.Item1), newVertex1, newVertex2);
-        CreateNewMesh(rightTriangles, right.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+        if (right.Count > 0 && left.Count == 0)
+        {
+            int[] rightTriangles = CreateTriangles(right);
+            CreateNewMesh(rightTriangles, right.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+        }
+        
+        if (right.Count > 0 && left.Count > 0)
+        {
+            int[] rightTriangles = CreateTriangles(right, newVertex1, newVertex2);
+            CreateNewMesh(rightTriangles, right.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+            
+            int[] leftTriangles = CreateTriangles(left, newVertex1, newVertex2);
+            CreateNewMesh(leftTriangles, left.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+        }
+
         checkedVectors.Add(newVertex1);
         checkedVectors.Add(newVertex2);
     }
@@ -199,11 +215,32 @@ public class EnumeratorTest : MonoBehaviour
 
         return triangles;
     }
-
-    private void CreateNewMesh(int[] triangles, List<int> vertices, Vector3 newVertex1, Vector3 newVertex2)
+    
+    private int[] CreateTriangles(List<(int, float)> oldVertexIndices)
     {
-        Vector3 normal = _mesh.normals[vertices[0]];
-        Vector3 tangent = _mesh.tangents[vertices[0]];
+        Vector3 sideNormal = _mesh.normals[oldVertexIndices[0].Item1];
+        Vector3 mainLine = _mesh.vertices[oldVertexIndices[0].Item1] - _mesh.vertices[oldVertexIndices[1].Item1];
+        int[] triangles = new int[(oldVertexIndices.Count - 2) * 3];
+        for (int i = 0; i < oldVertexIndices.Count; i++)
+        {
+            //Возможно придется развернуть нормаль стороны
+            oldVertexIndices[i] = (oldVertexIndices[i].Item1,Vector3.SignedAngle(mainLine, _mesh.vertices[oldVertexIndices[0].Item1] - _mesh.vertices[oldVertexIndices[i].Item1], sideNormal));
+        }
+        
+        oldVertexIndices.Sort(2, oldVertexIndices.Count - 2, Comparer<(int, float)>.Create((p1, p2) => p1.Item2.CompareTo(p2.Item2)));
+
+        for (int i = 0; i < oldVertexIndices.Count - 2; i++)
+        {
+            triangles[3 * i] = oldVertexIndices[0].Item1;
+            triangles[3 * i + 1] = oldVertexIndices[i + 1].Item1;
+            triangles[3 * i + 2] = oldVertexIndices[i + 2].Item1;
+        }
+
+        return triangles;
+    }
+
+    private SideStruct CreateNewMesh(int[] triangles, List<int> vertices, Vector3 newVertex1, Vector3 newVertex2)
+    {
         List<Vector3> newVertices = new List<Vector3>();
         newVertices.AddRange(vertices.ConvertAll(x=> _mesh.vertices[x]));
         newVertices.Add(newVertex1);
@@ -215,6 +252,8 @@ public class EnumeratorTest : MonoBehaviour
         {
             triangles[i] = triangles[0];
         }
+
+        return new SideStruct(triangles, newVertices.ToArray(), _mesh.normals[vertices[0]], _mesh.tangents[vertices[0]]);
     }
 
     /// <summary>
