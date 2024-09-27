@@ -14,6 +14,7 @@ public class EnumeratorTest : MonoBehaviour
     private MeshFilter _filter;
     private List<int> checkedVertices = new List<int>();
     private List<Vector3> checkedVectors = new List<Vector3>();
+    private List<SideStruct> sides = new List<SideStruct>();
     private List<AssociatedTriangle> _potentialVertices = new List<AssociatedTriangle>();
     private List<AssociatedTriangle> _approvedVertices = new List<AssociatedTriangle>();
     private Mesh leftMesh, rightMesh;
@@ -168,22 +169,22 @@ public class EnumeratorTest : MonoBehaviour
         if (left.Count > 0 && right.Count == 0)
         {
             int[] leftTriangles = CreateTriangles(left);
-            CreateNewMesh(leftTriangles, left.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+            sides.Add(CreateNewSide(leftTriangles, left.ConvertAll(x => x.Item1)));
         }
         
         if (right.Count > 0 && left.Count == 0)
         {
             int[] rightTriangles = CreateTriangles(right);
-            CreateNewMesh(rightTriangles, right.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+            sides.Add(CreateNewSide(rightTriangles, right.ConvertAll(x => x.Item1)));
         }
         
         if (right.Count > 0 && left.Count > 0)
         {
             int[] rightTriangles = CreateTriangles(right, newVertex1, newVertex2);
-            CreateNewMesh(rightTriangles, right.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+            sides.Add(CreateNewSide(rightTriangles, right.ConvertAll(x => x.Item1), newVertex1, newVertex2));
             
             int[] leftTriangles = CreateTriangles(left, newVertex1, newVertex2);
-            CreateNewMesh(leftTriangles, left.ConvertAll(x => x.Item1), newVertex1, newVertex2);
+            sides.Add(CreateNewSide(leftTriangles, left.ConvertAll(x => x.Item1), newVertex1, newVertex2));
         }
 
         checkedVectors.Add(newVertex1);
@@ -239,7 +240,7 @@ public class EnumeratorTest : MonoBehaviour
         return triangles;
     }
 
-    private SideStruct CreateNewMesh(int[] triangles, List<int> vertices, Vector3 newVertex1, Vector3 newVertex2)
+    private SideStruct CreateNewSide(int[] triangles, List<int> vertices, Vector3 newVertex1, Vector3 newVertex2)
     {
         List<Vector3> newVertices = new List<Vector3>();
         newVertices.AddRange(vertices.ConvertAll(x=> _mesh.vertices[x]));
@@ -254,6 +255,11 @@ public class EnumeratorTest : MonoBehaviour
         }
 
         return new SideStruct(triangles, newVertices.ToArray(), _mesh.normals[vertices[0]], _mesh.tangents[vertices[0]]);
+    }
+    
+    private SideStruct CreateNewSide(int[] triangles, List<int> vertices)
+    {
+        return new SideStruct(triangles, vertices.ConvertAll(x=> _mesh.vertices[x]).ToArray(), _mesh.normals[vertices[0]], _mesh.tangents[vertices[0]]);
     }
 
     /// <summary>
