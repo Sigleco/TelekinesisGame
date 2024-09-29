@@ -18,8 +18,23 @@ public struct SideStruct
         tangent = _tangent;
     }
 
+    public int[] GetTriangles()
+    {
+        return triangles;
+    }
+
     public Vector3[] GetVertices()
     {
         return vertices;
+    }
+
+    public Vector3 GetNormal()
+    {
+        return normal;
+    }
+    
+    public Vector3 GetTangent()
+    {
+        return tangent;
     }
 }

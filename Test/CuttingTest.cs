@@ -41,7 +41,7 @@ public class EnumeratorTest : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             Divide();
-            CreateNewMeshes();
+            leftMesh = CreateNewMeshes(leftSides);
         }
     }
 
@@ -52,14 +52,15 @@ public class EnumeratorTest : MonoBehaviour
         {
             DivideSide(unUsedVertices);
         }
-
+        
+        checkedVectors = checkedVectors.Distinct().ToList();
         AddLastSide(checkedVectors, ref leftSides, ref rightSides);
     }
 
     private void DivideSide(List<int> unUsedVertices)
     {
         List<int> side = FindSide(unUsedVertices);
-        SeparateSide(side);
+        SeparateSideVertices(side);
     }
 
     private List<int> FindSide(List<int> unusedVertices)
@@ -100,7 +101,7 @@ public class EnumeratorTest : MonoBehaviour
         }
     }
     
-    private void SeparateSide(List<int> side)
+    private void SeparateSideVertices(List<int> side)
     {
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
         Vector3 newVertex1 = Vector3.zero, newVertex2 = Vector3.zero;
@@ -121,35 +122,37 @@ public class EnumeratorTest : MonoBehaviour
             }
         }
 
-        left.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
-        right.Sort((p1, p2) => -1 * p1.Item2.CompareTo(p2.Item2));
-
         if (left.Count > 1 && right.Count > 1)
         {
+            List<float> fl = new List<float>();
+            List<Vector3> points = new List<Vector3>();
+            
             left.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
             right.Sort((p1, p2) => -1 * p1.Item2.CompareTo(p2.Item2));
-            
-            Vector3 vec1 = ComputeIntersectionPoint(_mesh.vertices[left[0].Item1], _mesh.vertices[right[0].Item1]);
-            Vector3 vec2 = ComputeIntersectionPoint(_mesh.vertices[left[0].Item1], _mesh.vertices[right[1].Item1]);
-            Vector3 vec3 = ComputeIntersectionPoint(_mesh.vertices[left[1].Item1], _mesh.vertices[right[0].Item1]);
-            Vector3 vec4 = ComputeIntersectionPoint(_mesh.vertices[left[1].Item1], _mesh.vertices[right[1].Item1]);
 
-            float dot1 = Vector3.Dot(vec1, vec2)/(vec1.magnitude * vec2.magnitude);
-            float dot2 = Vector3.Dot(vec1, vec3)/(vec1.magnitude * vec3.magnitude);
-            float dot3 = Vector3.Dot(vec1, vec4)/(vec1.magnitude * vec4.magnitude);
-        
-            List<float> fl = new List<float>(){dot1, dot2, dot3};
-            List<Vector3> points = new List<Vector3>(){vec1, vec2, vec3, vec4};
-
-            if (dot1 > 0 && dot2 > 0 && dot3 > 0)
+            for (int i = 0; i < 2; i++)
             {
-                newVertex1 = vec1;
-                newVertex2 = points[fl.IndexOf(fl.Min()) + 1];
+                for (int j = 0; j < 2; j++)
+                {
+                    points.Add(ComputeIntersectionPoint(_mesh.vertices[left[i].Item1], _mesh.vertices[right[j].Item1]));
+                }
             }
-            else if (-dot1 > 0 && -dot2 > 0 && -dot3 > 0)
+
+            Vector3 cross = Vector3.Cross(points[0], points[1]);
+            for (int i = 1; i < 4; i++)
             {
-                newVertex1 = vec1;
+                fl.Add(Vector3.SignedAngle(points[0], points[i], cross));
+            }
+
+            if (fl[0] > 0 && fl[1] > 0 && fl[2] > 0)
+            {
+                newVertex1 = points[0];
                 newVertex2 = points[fl.IndexOf(fl.Max()) + 1];
+            }
+            else if (-fl[0] > 0 && -fl[1] > 0 && -fl[2] > 0)
+            {
+                newVertex1 = points[0];
+                newVertex2 = points[fl.IndexOf(fl.Min()) + 1];
             }
             else
             {
@@ -205,7 +208,7 @@ public class EnumeratorTest : MonoBehaviour
         
         oldVertexIndices.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
 
-        //triangles[0] = newVertex1;
+        //triangles[3*i] = newVertex1;
         //triangles[1] = newVertex2;
         triangles[2] = oldVertexIndices[0].Item1;
         
@@ -223,6 +226,7 @@ public class EnumeratorTest : MonoBehaviour
         Vector3 sideNormal = _mesh.normals[oldVertexIndices[0].Item1];
         Vector3 mainLine = _mesh.vertices[oldVertexIndices[0].Item1] - _mesh.vertices[oldVertexIndices[1].Item1];
         int[] triangles = new int[(oldVertexIndices.Count - 2) * 3];
+        
         for (int i = 0; i < oldVertexIndices.Count; i++)
         {
             //Возможно придется развернуть нормаль стороны
@@ -245,20 +249,20 @@ public class EnumeratorTest : MonoBehaviour
     {
         int[] triangles = new int[(vertices.Count - 2) * 3];
         Vector3 mainLine = vertices[0] - vertices[1];
-        List<(Vector3, float)> maps = vertices.ConvertAll(x => (x, 0f));
-        for (int i = 1; i < vertices.Count; i++)
+        List<(Vector3, int, float)> maps = vertices.ConvertAll(x => (x, vertices.IndexOf(x), 0f));
+        for (int i = 2; i < vertices.Count; i++)
         {
             //Возможно придется развернуть нормаль стороны
-            maps[i] = (maps[i].Item1, Vector3.SignedAngle(mainLine, vertices[0] - vertices[i], normal));
+            maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[0] - vertices[i], normal));
         }
         
-        maps.Sort(1, maps.Count - 1, Comparer<(Vector3, float)>.Create((p1, p2) => p1.Item2.CompareTo(p2.Item2)));
+        maps.Sort(2, maps.Count - 2, Comparer<(Vector3, int, float)>.Create((p1, p2) => p1.Item3.CompareTo(p2.Item3)));
 
-        for (int i = 0; i < vertices.Count - 2; i++)
+        for (int i = 0; i < maps.Count - 2; i++)
         {
-            triangles[3 * i] = i;
-            triangles[3 * i + 1] = i+1;
-            triangles[3 * i + 2] = i+2;
+            triangles[3 * i] = maps[0].Item2;
+            triangles[3 * i + 1] = maps[i + 1].Item2;
+            triangles[3 * i + 2] = maps[i + 2].Item2;
         }
 
         return triangles;
@@ -289,7 +293,6 @@ public class EnumeratorTest : MonoBehaviour
     private void AddLastSide(List<Vector3> vertices, ref List<SideStruct> sides, ref List<SideStruct> oppositeSides)
     {
         vertices = vertices.Distinct().ToList();
-
         Vector3 nm = Vector3.Cross(vertices[0] - vertices[1], vertices[0] - vertices[2]);
 
         Vector3[] sideVertices = sides[0].GetVertices();
@@ -297,10 +300,10 @@ public class EnumeratorTest : MonoBehaviour
         
         for (int i = 0; i < angles.Length; i++)
         {
-            angles[i] = Vector3.Angle(nm, vertices[0] - sideVertices[i]);
+            angles[i] = Vector3.Angle(nm, sideVertices[i] - vertices[0]);
         }
 
-        if (angles[0] > 90 && angles[1] > 90)
+        if (angles[0] < 90 && angles[1] < 90)
         {
             nm *= -1;
         }
@@ -314,12 +317,58 @@ public class EnumeratorTest : MonoBehaviour
             (triangles[i + 1], triangles[i + 2]) = (triangles[i + 2], triangles[i + 1]);
         }
 
-        sides.Add(new SideStruct(triangles, vertices.ToArray(), -1 * nm, vertices[0] - vertices[1]));
+        oppositeSides.Add(new SideStruct(triangles, vertices.ToArray(), -1 * nm, vertices[0] - vertices[1]));
     }
     
-    private void CreateNewMeshes()
+    private Mesh CreateNewMeshes(List<SideStruct> sides)
     {
+        Mesh newMesh = new Mesh();
+        int vCounter = 0;
+        int trCounter = 0;
+        for (int i = 0; i < sides.Count; i++)
+        {
+            vCounter += sides[i].GetVertices().Length;
+            trCounter += sides[i].GetTriangles().Length;
+        }
+
+        Vector3[] _vertices = new Vector3[vCounter];
+        Vector3[] _normals = new Vector3[vCounter];
+        Vector4[] _tangents = new Vector4[vCounter];
+        int[] _triangles = new int[trCounter];
+
+        vCounter = 0;
+        trCounter = 0;
+        for (int i = 0; i < sides.Count; i++)
+        {
+            Vector3[] tempV = sides[i].GetVertices();
+            Array.Copy(tempV, 0, _vertices, vCounter, tempV.Length);
+
+            for (int j = 0; j < tempV.Length; j++)
+            {
+                Vector3 nm = sides[i].GetNormal();
+                Vector3 tg = sides[i].GetTangent();
+                _normals[vCounter + j] = nm;
+                _tangents[vCounter + j] = new Vector4(tg.x, tg.y, tg.z, 1f);
+            }
+            
+            int[] tr = sides[i].GetTriangles();
+            for (int j = 0; j < tempV.Length; j++)
+            {
+                _triangles[trCounter + 3 * j] = tr[3 * j] + vCounter;
+                _triangles[trCounter + 3 * j + 1] = tr[3 * j + 1] + vCounter;
+                _triangles[trCounter + 3 * j + 2] = tr[3 * j + 2] + vCounter;
+            }
+
+            vCounter += tempV.Length;
+            trCounter += tr.Length;
+        }
+
+        newMesh.vertices = _vertices;
+        newMesh.normals = _normals;
+        newMesh.tangents = _tangents;
+        newMesh.triangles = _triangles;
         
+        return newMesh;
     }
 
     /// <summary>
