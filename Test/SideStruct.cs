@@ -17,4 +17,9 @@ public struct SideStruct
         normal = _normal;
         tangent = _tangent;
     }
+
+    public Vector3[] GetVertices()
+    {
+        return vertices;
+    }
 }
