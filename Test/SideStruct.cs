@@ -8,9 +8,9 @@ public struct SideStruct
     private int[] triangles;
     private Vector3[] vertices;
     private Vector3 normal;
-    private Vector3 tangent;
+    private Vector4 tangent;
 
-    public SideStruct(int[] _triangles, Vector3[] _vertices, Vector3 _normal, Vector3 _tangent)
+    public SideStruct(int[] _triangles, Vector3[] _vertices, Vector3 _normal, Vector4 _tangent)
     {
         triangles = _triangles;
         vertices = _vertices;
@@ -33,7 +33,7 @@ public struct SideStruct
         return normal;
     }
     
-    public Vector3 GetTangent()
+    public Vector4 GetTangent()
     {
         return tangent;
     }
