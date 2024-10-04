@@ -12,14 +12,10 @@ public class EnumeratorTest : MonoBehaviour
     private Vector3 _dirU = Vector3.up;
     private Mesh _mesh;
     private MeshFilter _filter;
-    private List<int> checkedVertices = new List<int>();
     private List<Vector3> checkedVectors = new List<Vector3>();
     private List<SideStruct> leftSides = new List<SideStruct>();
     private List<SideStruct> rightSides = new List<SideStruct>();
-    private List<AssociatedTriangle> _potentialVertices = new List<AssociatedTriangle>();
-    private List<AssociatedTriangle> _approvedVertices = new List<AssociatedTriangle>();
     private Mesh leftMesh, rightMesh;
-    private bool cutReady;
 
     private void Start()
     {
@@ -35,21 +31,19 @@ public class EnumeratorTest : MonoBehaviour
         {
             Divide();
             leftMesh = CreateNewMeshes(leftSides);
-            GameObject obj = new GameObject();
-            obj.transform.position = Vector3.right * 1f;
-            obj.AddComponent<MeshFilter>();
-            MeshFilter filter = obj.GetComponent<MeshFilter>();
+            GameObject obj = new GameObject { transform = {position = Vector3.right * 1f}};
+            MeshFilter filter = obj.AddComponent<MeshFilter>();
             filter.mesh = leftMesh;
-            obj.AddComponent<MeshRenderer>();
+            MeshRenderer rend = obj.AddComponent<MeshRenderer>();
+            rend.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
             obj.AddComponent<BoxCollider>();
             
             rightMesh = CreateNewMeshes(rightSides);
-            GameObject obj1 = new GameObject();
-            obj1.transform.position = Vector3.right * 2f;
-            obj1.AddComponent<MeshFilter>();
-            MeshFilter filter1 = obj1.GetComponent<MeshFilter>();
+            GameObject obj1 = new GameObject { transform = {position = Vector3.right * 2f}};
+            MeshFilter filter1 = obj1.AddComponent<MeshFilter>();
             filter1.mesh = rightMesh;
-            obj1.AddComponent<MeshRenderer>();
+            MeshRenderer rend1 = obj1.AddComponent<MeshRenderer>();
+            rend1.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
             obj1.AddComponent<BoxCollider>();
         }
     }
