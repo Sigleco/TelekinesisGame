@@ -14,7 +14,7 @@ public struct AssociatedTriangle
         _vertexPosition = vertexPosition;
         if (triangle.Length > 3)
         {
-            throw new Exception("Sended array its not a triangle. Array must contain only three elements");
+            throw new Exception("Sent array its not a triangle. Array must contain only three elements");
         }
         else
         {
