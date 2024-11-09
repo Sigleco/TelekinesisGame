@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class Plate : Projectile
@@ -8,6 +9,7 @@ public class Plate : Projectile
     private Vector3[] rotations = {new(0,-90,-90), new(0,90,0), new(0,0,90)};
     private int _rotIndex;
     private bool _underControl;
+    private Cutter _cutter = new Cutter();
     
     public override Vector3 VertDirection
     {
@@ -32,14 +34,35 @@ public class Plate : Projectile
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Obstacle"))
+        /*if (other.CompareTag("Obstacle"))
         {
             Stuck();
         }
 
         if (other.CompareTag("Enemy"))
         {
-            //Separate pieces
+            _cutter.SetCuttingParams(other.,Velocity);
+        }*/
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Obstacle"))
+        {
+            Stuck();
+        }
+
+        if (collision.gameObject.CompareTag("Enemy"))
+        {
+            //TODO
+            Debug.Log("Contact");
+            Vector3 temp = collision.gameObject.transform.InverseTransformPoint(collision.contacts[0].point);
+            _cutter.SetCuttingParams(temp,
+                collision.gameObject.transform.InverseTransformDirection(Velocity), 
+                collision.gameObject.transform.InverseTransformDirection(transform.up - Velocity * (Vector3.Dot(transform.up, Velocity)/ Velocity.magnitude)),
+                collision.gameObject);
+            _cutter.StartCutting();
+            GetComponent<Collider>().enabled = false;
         }
     }
 

@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
 using Object = UnityEngine.Object;
 
 public class Cutter: ICutter
@@ -22,8 +21,8 @@ public class Cutter: ICutter
     public void SetCuttingParams(Vector3 contactPoint, Vector3 planeTangent1, Vector3 planeTangent2, GameObject cuttingObj)
     {
         _contactPoint = contactPoint;
-        _dirV = planeTangent1;
-        _dirU = planeTangent2;
+        _dirV = planeTangent1.normalized;
+        _dirU = planeTangent2.normalized;
         _parentObject = cuttingObj;
         if (_parentObject != null)
         {
@@ -36,26 +35,43 @@ public class Cutter: ICutter
     private void InstantiateObjects()
     {
         GameObject obj = new GameObject();
-        obj.transform.SetPositionAndRotation(_parentObject.transform.position, _parentObject.transform.rotation);
+        obj.transform.SetPositionAndRotation(_parentObject.transform.position + Vector3.forward * 2f, _parentObject.transform.rotation);
         MeshFilter filter = obj.AddComponent<MeshFilter>();
         filter.mesh = leftMesh;
         MeshRenderer rend = obj.AddComponent<MeshRenderer>();
         rend.material = _parentObject.GetComponent<MeshRenderer>().material;
-        obj.AddComponent<BoxCollider>();
+        //obj.AddComponent<BoxCollider>();
             
         rightMesh = CreateNewMeshes(rightSides);
-        GameObject obj1 = new GameObject { transform = {position = Vector3.right * 2f}};
+        GameObject obj1 = new GameObject();
+        obj1.transform.SetPositionAndRotation(_parentObject.transform.position + Vector3.forward * 3f, _parentObject.transform.rotation);
         MeshFilter filter1 = obj1.AddComponent<MeshFilter>();
         filter1.mesh = rightMesh;
         MeshRenderer rend1 = obj1.AddComponent<MeshRenderer>();
         rend1.material = _parentObject.GetComponent<MeshRenderer>().material;
-        obj1.AddComponent<BoxCollider>();
+        //obj1.AddComponent<BoxCollider>();
         Object.Destroy(_parentObject);
     }
 
     public void StartCutting()
     {
-        List<int> unUsedVertices = Enumerable.Range(0, _mesh.vertices.Length).ToList();
+        bool A = true;
+        Vector3 temp = _mesh.vertices[0];
+        List<int> ar = new List<int>();
+        int counter = 0;
+        for (int i = 1; i < _mesh.vertices.Length; i++)
+        { 
+            if (temp == _mesh.vertices[i])
+            {
+                ar.AddRange(_mesh.triangles);
+                A = false;
+                counter++;
+            }
+        }
+
+        A = true;
+
+        /*List<int> unUsedVertices = Enumerable.Range(0, _mesh.vertices.Length).ToList();
         while (unUsedVertices.Count > 0)
         {
             DivideSide(unUsedVertices);
@@ -65,7 +81,7 @@ public class Cutter: ICutter
         AddLastSide(checkedVectors, ref leftSides, ref rightSides);
         leftMesh = CreateNewMeshes(leftSides);
         rightMesh = CreateNewMeshes(rightSides);
-        InstantiateObjects();
+        InstantiateObjects();*/
     }
 
     private void DivideSide(List<int> unUsedVertices)
@@ -112,6 +128,7 @@ public class Cutter: ICutter
         }
     }
     
+    //TODO
     private void SeparateSideVertices(List<int> side)
     {
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
@@ -122,7 +139,7 @@ public class Cutter: ICutter
         
         for (int i = 0; i < side.Count; i++)
         {
-            float temp = Vector3.Dot(crossProduct, _contactPoint + _mesh.vertices[side[i]]) / crossProduct.magnitude;
+            float temp = Vector3.Dot(crossProduct, _contactPoint +_mesh.vertices[side[i]]) / crossProduct.magnitude;
             if (temp >= 0)
             {
                 left.Add((side[i], temp));
@@ -132,7 +149,25 @@ public class Cutter: ICutter
                 right.Add((side[i], temp));
             }
         }
-
+        
+        List<Vector3> _right = right.ConvertAll(x => _mesh.vertices[x.Item1]);
+        List<Vector3> _left = left.ConvertAll(x => _mesh.vertices[x.Item1]);
+        
+        if (left.Count == 0 || right.Count == 0) 
+        {
+            if (left.Count > 0 && right.Count == 0)
+            {
+                int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
+                leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
+            }
+            else if (right.Count > 0 && left.Count == 0)
+            {
+                int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
+                rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
+            }
+            return;
+        }
+        
         if (left.Count > 1 && right.Count > 1)
         {
             List<float> fl = new List<float>();
@@ -183,33 +218,17 @@ public class Cutter: ICutter
             newVertex1 = ComputeIntersectionPoint(_mesh.vertices[right[0].Item1], _mesh.vertices[left[0].Item1]);
             newVertex2 = ComputeIntersectionPoint(_mesh.vertices[right[0].Item1], _mesh.vertices[left[1].Item1]);
         }
+
+        _right.InsertRange(0, new []{newVertex1, newVertex2});
+        int[] _rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
+        rightSides.Add(new SideStruct(_rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
         
-        List<Vector3> _right = right.ConvertAll(x => _mesh.vertices[x.Item1]);
-        List<Vector3> _left = left.ConvertAll(x => _mesh.vertices[x.Item1]);
+        _left.InsertRange(0, new []{newVertex1, newVertex2});
+        int[] _leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
+        leftSides.Add(new SideStruct(_leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
         
-        if (right.Count > 0 && left.Count > 0)
-        {
-            _right.InsertRange(0, new []{newVertex1, newVertex2});
-            int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
-            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
-            
-            _left.InsertRange(0, new []{newVertex1, newVertex2});
-            int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
-            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
-            
-            checkedVectors.Add(newVertex1);
-            checkedVectors.Add(newVertex2);
-        }
-        else if (left.Count > 0 && right.Count == 0)
-        {
-            int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
-            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
-        }
-        else if (right.Count > 0 && left.Count == 0)
-        {
-            int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
-            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
-        }
+        checkedVectors.Add(newVertex1);
+        checkedVectors.Add(newVertex2);
     }
 
     private int[] CreateTriangles(List<Vector3> vertices, Vector3 normal)
@@ -219,7 +238,6 @@ public class Cutter: ICutter
         List<(Vector3, int, float)> maps = vertices.ConvertAll(x => (x, vertices.IndexOf(x), 0f));
         for (int i = 2; i < vertices.Count; i++)
         {
-            //Возможно придется развернуть нормаль стороны
             maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[i] - vertices[0],  normal));
         }
         
@@ -285,26 +303,22 @@ public class Cutter: ICutter
         trCounter = 0;
         for (int i = 0; i < sides.Count; i++)
         {
-            Vector3[] tempV = sides[i].GetVertices();
-            Array.Copy(tempV, 0, _vertices, vCounter, tempV.Length);
+            Vector3[] tempAr = sides[i].GetVertices();
+            Array.Copy(tempAr, 0, _vertices, vCounter, tempAr.Length);
+            tempAr = sides[i].GetNormals();
+            Array.Copy(tempAr, 0, _normals, vCounter, tempAr.Length);
+            Vector4[] tempTan = sides[i].GetTangents();
+            Array.Copy(tempTan, 0, _tangents, vCounter, tempAr.Length);
 
-            for (int j = 0; j < tempV.Length; j++)
-            {
-                Vector3 nm = sides[i].GetNormal();
-                Vector3 tg = sides[i].GetTangent();
-                _normals[vCounter + j] = nm;
-                _tangents[vCounter + j] = new Vector4(tg.x, tg.y, tg.z, -1f);
-            }
-            
             int[] tr = sides[i].GetTriangles();
-            for (int j = 0; j < tempV.Length - 2; j++)
+            for (int j = 0; j < tempAr.Length - 2; j++)
             {
                 _triangles[trCounter + 3 * j] = tr[3 * j] + vCounter;
                 _triangles[trCounter + 3 * j + 1] = tr[3 * j + 1] + vCounter;
                 _triangles[trCounter + 3 * j + 2] = tr[3 * j + 2] + vCounter;
             }
 
-            vCounter += tempV.Length;
+            vCounter += tempAr.Length;
             trCounter += tr.Length;
         }
 
@@ -342,7 +356,7 @@ public class Cutter: ICutter
 
         matrix = FindInverseMatrix(matrix);
 
-        Vector3 coefs = MultiplyMatrix3x3Vector3x1(matrix, secondVertex - _contactPoint);
+        Vector3 coefs = MultiplyMatrix3x3Vector3x1(matrix, /*secondVertex - */_contactPoint);
         return secondVertex + (secondVertex - firstVertex) * coefs[2];
     }
 
