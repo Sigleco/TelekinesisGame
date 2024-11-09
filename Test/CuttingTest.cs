@@ -15,7 +15,21 @@ public class EnumeratorTest : MonoBehaviour
     private List<SideStruct> leftSides = new List<SideStruct>();
     private List<SideStruct> rightSides = new List<SideStruct>();
     private Mesh leftMesh, rightMesh;
+    private List<int> testList;
 
+    /*public Color gizmoColor = Color.red;
+    public float sphereSize = 0.05f;
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = gizmoColor;
+        
+        foreach (var point in testList)
+        {
+            Gizmos.DrawSphere(_mesh.vertices[point] + gameObject.transform.position, sphereSize);
+        }
+    }*/
+    
     private void Start()
     {
         _filter = gameObject.GetComponent<MeshFilter>();
@@ -50,19 +64,19 @@ public class EnumeratorTest : MonoBehaviour
     private void Divide()
     {
         List<int> unUsedVertices = Enumerable.Range(0, _mesh.vertices.Length).ToList();
-        while (unUsedVertices.Count > 0)
+        /*while (unUsedVertices.Count > 0)
         {
-            DivideSide(unUsedVertices);
-        }
+            DivideSide(FindSide(unUsedVertices));
+        }*/
         
-        checkedVectors = checkedVectors.Distinct().ToList();
-        AddLastSide(checkedVectors, ref leftSides, ref rightSides);
+        testList = FindSide(unUsedVertices);
+        /*checkedVectors = checkedVectors.Distinct().ToList();
+        AddLastSide(checkedVectors, ref leftSides, ref rightSides);*/
     }
 
-    private void DivideSide(List<int> unUsedVertices)
+    private void DivideSide(List<int> sideTriangleIndices)
     {
-        List<int> side = FindSide(unUsedVertices);
-        SeparateSideVertices(side);
+        SeparateSideVertices(sideTriangleIndices);
     }
 
     private List<int> FindSide(List<int> unusedVertices)
@@ -227,10 +241,10 @@ public class EnumeratorTest : MonoBehaviour
         return triangles;
     }
 
-    /*private int[] DecreaseTriangleIndices(List<int> triangleIndices)
+    private int[] DecreaseTriangleIndices(List<int> triangleIndices)
     {
-        
-    }*/
+        return new int[5];
+    }
 
     private void AddLastSide(List<Vector3> vertices, ref List<SideStruct> sides, ref List<SideStruct> oppositeSides)
     {
@@ -273,38 +287,38 @@ public class EnumeratorTest : MonoBehaviour
             trCounter += sides[i].GetTriangles().Length;
         }
 
-        Vector3[] _vertices = new Vector3[vCounter];
-        Vector3[] _normals = new Vector3[vCounter];
-        Vector4[] _tangents = new Vector4[vCounter];
-        int[] _triangles = new int[trCounter];
+        Vector3[] vertices = new Vector3[vCounter];
+        Vector3[] normals = new Vector3[vCounter];
+        Vector4[] tangents = new Vector4[vCounter];
+        int[] triangles = new int[trCounter];
 
         vCounter = 0;
         trCounter = 0;
         for (int i = 0; i < sides.Count; i++)
         {
             Vector3[] tempAr = sides[i].GetVertices();
-            Array.Copy(tempAr, 0, _vertices, vCounter, tempAr.Length);
+            Array.Copy(tempAr, 0, vertices, vCounter, tempAr.Length);
             tempAr = sides[i].GetNormals();
-            Array.Copy(tempAr, 0, _normals, vCounter, tempAr.Length);
+            Array.Copy(tempAr, 0, normals, vCounter, tempAr.Length);
             Vector4[] tempTan = sides[i].GetTangents();
-            Array.Copy(tempTan, 0, _tangents, vCounter, tempAr.Length);
+            Array.Copy(tempTan, 0, tangents, vCounter, tempAr.Length);
 
             int[] tr = sides[i].GetTriangles();
             for (int j = 0; j < tempAr.Length - 2; j++)
             {
-                _triangles[trCounter + 3 * j] = tr[3 * j] + vCounter;
-                _triangles[trCounter + 3 * j + 1] = tr[3 * j + 1] + vCounter;
-                _triangles[trCounter + 3 * j + 2] = tr[3 * j + 2] + vCounter;
+                triangles[trCounter + 3 * j] = tr[3 * j] + vCounter;
+                triangles[trCounter + 3 * j + 1] = tr[3 * j + 1] + vCounter;
+                triangles[trCounter + 3 * j + 2] = tr[3 * j + 2] + vCounter;
             }
 
             vCounter += tempAr.Length;
             trCounter += tr.Length;
         }
 
-        newMesh.vertices = _vertices;
-        newMesh.normals = _normals;
-        newMesh.tangents = _tangents;
-        newMesh.triangles = _triangles;
+        newMesh.vertices = vertices;
+        newMesh.normals = normals;
+        newMesh.tangents = tangents;
+        newMesh.triangles = triangles;
         
         return newMesh;
     }
