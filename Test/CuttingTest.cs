@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+//TODO: project dots on cutting plane
+
 public class EnumeratorTest : MonoBehaviour
 {
     private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
@@ -102,7 +104,7 @@ public class EnumeratorTest : MonoBehaviour
             CheckNextGenDots( ref sideVertices,  startIndex, temp);
         }
     }
-    
+
     private void SeparateSideVertices(List<int> side)
     {
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
@@ -123,7 +125,41 @@ public class EnumeratorTest : MonoBehaviour
                 right.Add((side[i], temp));
             }
         }
-
+        
+        (newVertex1, newVertex2) = FindNewVertices(left, right);
+        
+        List<Vector3> _right = right.ConvertAll(x => _mesh.vertices[x.Item1]);
+        List<Vector3> _left = left.ConvertAll(x => _mesh.vertices[x.Item1]);
+        
+        if (right.Count > 0 && left.Count > 0)
+        {
+            _right.InsertRange(0, new []{newVertex1, newVertex2});
+            int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
+            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
+            
+            _left.InsertRange(0, new []{newVertex1, newVertex2});
+            int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
+            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
+            
+            checkedVectors.Add(newVertex1);
+            checkedVectors.Add(newVertex2);
+        }
+        else if (left.Count > 0 && right.Count == 0)
+        {
+            int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
+            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
+        }
+        else if (right.Count > 0 && left.Count == 0)
+        {
+            int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
+            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
+        }
+    }
+    
+    private (Vector3, Vector3) FindNewVertices(List<(int, float)> left, List<(int, float)> right)
+    {
+        Vector3 newVertex1 = Vector3.zero, newVertex2 = Vector3.zero;
+        
         if (left.Count > 1 && right.Count > 1)
         {
             List<float> fl = new List<float>();
@@ -132,9 +168,9 @@ public class EnumeratorTest : MonoBehaviour
             left.Sort((p1, p2) => p1.Item2.CompareTo(p2.Item2));
             right.Sort((p1, p2) => -1 * p1.Item2.CompareTo(p2.Item2));
 
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < left.Count; i++)
             {
-                for (int j = 0; j < 2; j++)
+                for (int j = 0; j < right.Count; j++)
                 {
                     points.Add(ComputeIntersectionPoint(_mesh.vertices[left[i].Item1], _mesh.vertices[right[j].Item1]));
                 }
@@ -174,33 +210,8 @@ public class EnumeratorTest : MonoBehaviour
             newVertex1 = ComputeIntersectionPoint(_mesh.vertices[right[0].Item1], _mesh.vertices[left[0].Item1]);
             newVertex2 = ComputeIntersectionPoint(_mesh.vertices[right[0].Item1], _mesh.vertices[left[1].Item1]);
         }
-        
-        List<Vector3> _right = right.ConvertAll(x => _mesh.vertices[x.Item1]);
-        List<Vector3> _left = left.ConvertAll(x => _mesh.vertices[x.Item1]);
-        
-        if (right.Count > 0 && left.Count > 0)
-        {
-            _right.InsertRange(0, new []{newVertex1, newVertex2});
-            int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
-            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
-            
-            _left.InsertRange(0, new []{newVertex1, newVertex2});
-            int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
-            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
-            
-            checkedVectors.Add(newVertex1);
-            checkedVectors.Add(newVertex2);
-        }
-        else if (left.Count > 0 && right.Count == 0)
-        {
-            int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
-            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
-        }
-        else if (right.Count > 0 && left.Count == 0)
-        {
-            int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
-            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
-        }
+
+        return (newVertex1, newVertex2);
     }
 
     private int[] CreateTriangles(List<Vector3> vertices, Vector3 normal)
