@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 //TODO: project dots on cutting plane
 
@@ -30,7 +31,8 @@ public class EnumeratorTest : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            Divide();
+            //Divide();
+            TriangleDivide();
             leftMesh = CreateNewMeshes(leftSides);
             GameObject obj = new GameObject { transform = {position = Vector3.right * 1f}};
             MeshFilter filter = obj.AddComponent<MeshFilter>();
@@ -49,6 +51,144 @@ public class EnumeratorTest : MonoBehaviour
         }
     }
 
+    private void TriangleDivide()
+    {
+        List<Vector3> leftVertices = new List<Vector3>(), rightVertices = new List<Vector3>();
+        for (int i = 0; i < _mesh.triangles.Length; i += 3)
+        {
+            if (IsTriangleDivided(i))
+            {
+                DivideTriangle(i, ref leftVertices, ref rightVertices);
+                AddNewVertices(ref leftVertices, ref rightVertices);
+                AddToSides(leftVertices, i);
+                AddToSides(rightVertices, i);
+            }
+            else
+            {
+                PutTriangleToSide(i);
+            }
+        }
+    }
+    
+    private bool IsTriangleDivided(int startTriangleIndex)
+    {
+        Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
+        List<Vector3> triangle = GetTriangle(startTriangleIndex).ConvertAll(x => _mesh.vertices[_mesh.triangles[x]]);
+        bool result, logAnd = true, logOr = false;
+
+        for (int i = 0; i < triangle.Count; i++)
+        {
+            float temp = Vector3.Dot(crossProduct, _contactPoint + triangle[i]) / crossProduct.magnitude;
+            if (temp >= 0)
+            {
+                logAnd = logAnd & true;
+                logOr = true;
+            }
+            else
+            {
+                logAnd = false;
+                logOr = logOr | false;
+            }
+        }
+
+        if (!(logAnd && logOr))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void PutTriangleToSide(int startTriangleIndex)
+    {
+        List<int> triangle = GetTriangle(startTriangleIndex);
+        Vector3[] vertices = triangle.ConvertAll(x => _mesh.vertices[_mesh.triangles[x]]).ToArray();
+        Vector3[] normals = triangle.ConvertAll(x => _mesh.normals[_mesh.triangles[x]]).ToArray();
+        Vector4[] tangents = triangle.ConvertAll(x => _mesh.tangents[_mesh.triangles[x]]).ToArray();
+        
+        Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
+        float temp = Vector3.Dot(crossProduct, _contactPoint + vertices[0]) / crossProduct.magnitude;
+        if (temp >= 0)
+        {
+            leftSides.Add(new SideStruct(triangle.ToArray(), vertices, normals, tangents));
+        }
+        else
+        {
+            rightSides.Add(new SideStruct(triangle.ToArray(), vertices, normals, tangents));
+        }
+    }
+
+    private void DivideTriangle(int startTriangleIndex, ref List<Vector3> leftVertices, ref List<Vector3> rightVertices)
+    {
+        List<Vector3> vertices = GetTriangle(startTriangleIndex).ConvertAll(x => _mesh.vertices[_mesh.triangles[x]]);
+        Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
+        
+        for(int i = 0; i < 3; i++)
+        {
+            float temp = Vector3.Dot(crossProduct, _contactPoint + vertices[i]) / crossProduct.magnitude;
+            if (temp >= 0)
+            {
+                leftVertices.Add(vertices[i]);
+            }
+            else
+            {
+                rightVertices.Add(vertices[i]);
+            }
+        }
+    }
+
+    private void AddNewVertices(ref List<Vector3> leftVertices, ref List<Vector3> rightVertices)
+    {
+        List<Vector3> newVertices = new List<Vector3>();
+        for (int i = 0; i < leftVertices.Count; i++)
+        {
+            for (int j = 0; j < rightVertices.Count; j++)
+            {
+                newVertices[i] = ComputeIntersectionPoint(leftVertices[i], rightVertices[j]);
+            }
+        }
+        
+        leftVertices.AddRange(newVertices);
+        rightVertices.AddRange(newVertices);
+    }
+
+    private void AddToSides(List<Vector3> vertices, int triangelIndex)
+    {
+        int[] triangles = new int[(vertices.Count - 2) * 3];
+        Vector3 mainLine = vertices[1] - vertices[0];
+        Vector3 normal = GetNormal(vertices, triangelIndex);
+        for (int i = 2; i < vertices.Count; i++)
+        {
+            maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[i] - vertices[0],  normal));
+        }
+        
+        maps.Sort(1, maps.Count - 1, Comparer<(Vector3, int, float)>.Create((p1, p2) => p1.Item3.CompareTo(p2.Item3)));
+
+        for (int i = 0; i < maps.Count - 2; i++)
+        {
+            triangles[3 * i] = maps[0].Item2;
+            triangles[3 * i + 1] = maps[i + 1].Item2;
+            triangles[3 * i + 2] = maps[i + 2].Item2;
+        }
+
+        return triangles;
+    }
+
+    private Vector3 GetNormal(List<Vector3> vertices, int triangleIndex)
+    {
+        Vector3 normal = Vector3.up;
+        normal = Vector3.Cross(vertices[1] - vertices[0], vertices[2] - vertices[0]);
+        if (Vector3.Dot(normal, _mesh.normals[_mesh.triangles[triangleIndex]]) >= 0)
+        {
+            return normal;
+        }
+        else
+        {
+            return -1 * normal;
+        }
+    }
+    //////////////////////////////////////////////////////////////////////////////
+
     private void Divide()
     {
         List<int> unUsedVertices = Enumerable.Range(0, _mesh.vertices.Length).ToList();
@@ -64,7 +204,7 @@ public class EnumeratorTest : MonoBehaviour
     private void DivideSide(List<int> unUsedVertices)
     {
         List<int> side = FindSide(unUsedVertices);
-        SeparateSideVertices(side);
+        BuildNewSides(side);
     }
 
     private List<int> FindSide(List<int> unusedVertices)
@@ -105,7 +245,7 @@ public class EnumeratorTest : MonoBehaviour
         }
     }
 
-    private void SeparateSideVertices(List<int> side)
+    private void BuildNewSides(List<int> side)
     {
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
         Vector3 newVertex1 = Vector3.zero, newVertex2 = Vector3.zero;
@@ -221,7 +361,6 @@ public class EnumeratorTest : MonoBehaviour
         List<(Vector3, int, float)> maps = vertices.ConvertAll(x => (x, vertices.IndexOf(x), 0f));
         for (int i = 2; i < vertices.Count; i++)
         {
-            //Возможно придется развернуть нормаль стороны
             maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[i] - vertices[0],  normal));
         }
         
