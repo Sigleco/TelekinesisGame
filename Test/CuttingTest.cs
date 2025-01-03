@@ -5,8 +5,6 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-//TODO: project dots on cutting plane
-
 public class EnumeratorTest : MonoBehaviour
 {
     private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
@@ -60,8 +58,8 @@ public class EnumeratorTest : MonoBehaviour
             {
                 DivideTriangle(i, ref leftVertices, ref rightVertices);
                 AddNewVertices(ref leftVertices, ref rightVertices);
-                AddToSides(leftVertices, i);
-                AddToSides(rightVertices, i);
+                AddToSides(leftVertices, GetNormal(leftVertices, i));
+                AddToSides(rightVertices, GetNormal(rightVertices, i));
             }
             else
             {
@@ -152,14 +150,15 @@ public class EnumeratorTest : MonoBehaviour
         rightVertices.AddRange(newVertices);
     }
 
-    private void AddToSides(List<Vector3> vertices, int triangelIndex)
+    private void AddToSides(List<Vector3> vertices, Vector3 normal)
     {
         int[] triangles = new int[(vertices.Count - 2) * 3];
         Vector3 mainLine = vertices[1] - vertices[0];
-        Vector3 normal = GetNormal(vertices, triangelIndex);
+        List<float> signedAngles = new List<float>();
+
         for (int i = 2; i < vertices.Count; i++)
         {
-            maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[i] - vertices[0],  normal));
+            signedAngles.Add(Vector3.SignedAngle(mainLine, vertices[i] - vertices[0], normal));
         }
         
         maps.Sort(1, maps.Count - 1, Comparer<(Vector3, int, float)>.Create((p1, p2) => p1.Item3.CompareTo(p2.Item3)));
