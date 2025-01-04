@@ -6,17 +6,17 @@ using UnityEngine;
 using UnityEngine.PlayerLoop;
 using Object = UnityEngine.Object;
 
-public class Cutter: ICutter
+public class Cutter//: ICutter
 {
-    private Vector3 _contactPoint;
+    /*private Vector3 _contactPoint;
     private Vector3 _dirV;
     private Vector3 _dirU;
     private Mesh _mesh;
     private GameObject _parentObject;
     
     private List<Vector3> checkedVectors = new List<Vector3>();
-    private List<SideStruct> leftSides = new List<SideStruct>();
-    private List<SideStruct> rightSides = new List<SideStruct>();
+    private List<Side> leftSides = new List<Side>();
+    private List<Side> rightSides = new List<Side>();
     private Mesh leftMesh, rightMesh;
 
     public void SetCuttingParams(Vector3 contactPoint, Vector3 planeTangent1, Vector3 planeTangent2, GameObject cuttingObj)
@@ -191,11 +191,11 @@ public class Cutter: ICutter
         {
             _right.InsertRange(0, new []{newVertex1, newVertex2});
             int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
-            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
+            rightSides.Add(new Side(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
             
             _left.InsertRange(0, new []{newVertex1, newVertex2});
             int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
-            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
+            leftSides.Add(new Side(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
             
             checkedVectors.Add(newVertex1);
             checkedVectors.Add(newVertex2);
@@ -203,12 +203,12 @@ public class Cutter: ICutter
         else if (left.Count > 0 && right.Count == 0)
         {
             int[] leftTriangles = CreateTriangles(_left, _mesh.normals[left[0].Item1]);
-            leftSides.Add(new SideStruct(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
+            leftSides.Add(new Side(leftTriangles, _left.ToArray(), _mesh.normals[left[0].Item1], _mesh.tangents[left[0].Item1]));
         }
         else if (right.Count > 0 && left.Count == 0)
         {
             int[] rightTriangles = CreateTriangles(_right, _mesh.normals[right[0].Item1]);
-            rightSides.Add(new SideStruct(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
+            rightSides.Add(new Side(rightTriangles, _right.ToArray(), _mesh.normals[right[0].Item1], _mesh.tangents[right[0].Item1]));
         }
     }
 
@@ -235,7 +235,7 @@ public class Cutter: ICutter
         return triangles;
     }
 
-    private void AddLastSide(List<Vector3> vertices, ref List<SideStruct> sides, ref List<SideStruct> oppositeSides)
+    private void AddLastSide(List<Vector3> vertices, ref List<Side> sides, ref List<Side> oppositeSides)
     {
         vertices = vertices.Distinct().ToList();
         Vector3 nm = Vector3.Cross(vertices[0] - vertices[1], vertices[0] - vertices[2]);
@@ -255,17 +255,17 @@ public class Cutter: ICutter
 
         int[] triangles = CreateTriangles(vertices, nm);
         
-        sides.Add(new SideStruct((int[])triangles.Clone(), vertices.ToArray(), nm, vertices[0] - vertices[1]));
+        sides.Add(new Side((int[])triangles.Clone(), vertices.ToArray(), nm, vertices[0] - vertices[1]));
 
         for (int i = 0; i < triangles.Length;i +=3)
         {
             (triangles[i + 1], triangles[i + 2]) = (triangles[i + 2], triangles[i + 1]);
         }
 
-        oppositeSides.Add(new SideStruct(triangles, vertices.ToArray(), -1 * nm, vertices[0] - vertices[1]));
+        oppositeSides.Add(new Side(triangles, vertices.ToArray(), -1 * nm, vertices[0] - vertices[1]));
     }
     
-    private Mesh CreateNewMeshes(List<SideStruct> sides)
+    private Mesh CreateNewMeshes(List<Side> sides)
     {
         Mesh newMesh = new Mesh();
         int vCounter = 0;
@@ -410,5 +410,5 @@ public class Cutter: ICutter
         }
 
         return result;
-    }
+    }*/
 }

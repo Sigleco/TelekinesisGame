@@ -3,14 +3,19 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
-public struct SideStruct
+public class Side
 {
     private int[] triangles;
     private Vector3[] vertices;
     private Vector3[] normals;
     private Vector4[] tangents;
 
-    public SideStruct(int[] _triangles, Vector3[] _vertices, Vector3[] _normals, Vector4[] _tangents)
+    public Side()
+    {
+        
+    }
+    
+    public Side(int[] _triangles, Vector3[] _vertices, Vector3[] _normals, Vector4[] _tangents)
     {
         triangles = _triangles;
         vertices = _vertices;
@@ -28,12 +33,12 @@ public struct SideStruct
         return vertices;
     }
 
-    public Vector3[] GetNormal()
+    public Vector3[] GetNormals()
     {
         return normals;
     }
     
-    public Vector4[] GetTangent()
+    public Vector4[] GetTangents()
     {
         return tangents;
     }
