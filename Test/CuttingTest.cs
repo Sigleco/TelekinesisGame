@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 
 public class EnumeratorTest : MonoBehaviour
 {
-    private Vector3 _contactPoint = new Vector3(0.5f, 0.5f, 0.2f);
+    private Vector3 _contactPoint = new Vector3(0, -0.5f, 0);
     private Vector3 _dirV = Vector3.right;
     private Vector3 _dirU = Vector3.up;
     private Mesh _mesh;
@@ -24,7 +24,27 @@ public class EnumeratorTest : MonoBehaviour
         leftMesh = new Mesh();
         rightMesh = new Mesh();
     }
+    
+    private void OnDrawGizmos()
+    {
+        if (checkedVectors == null || checkedVectors.Count == 0)
+            return;
 
+        Gizmos.color = Color.red;
+
+        // Рисуем каждую вершину
+        foreach (var vertex in checkedVectors)
+        {
+            Gizmos.DrawSphere(transform.position + vertex, 0.1f);
+        }
+
+        // Соединяем вершины линиями, если их больше одной
+        for (int i = 0; i < checkedVectors.Count - 1; i++)
+        {
+            Gizmos.DrawLine(transform.position + checkedVectors[i], transform.position + checkedVectors[i + 1]);
+        }
+    }
+    
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
@@ -48,7 +68,7 @@ public class EnumeratorTest : MonoBehaviour
             obj1.AddComponent<BoxCollider>();
         }
     }
-
+    
     private void TriangleDivide()
     {
         Side leftSide = new Side(), rightSide = new Side();
@@ -594,13 +614,13 @@ public class EnumeratorTest : MonoBehaviour
         {
             matrix[i, 0] = _dirU[i];
             matrix[i, 1] = _dirV[i];
-            matrix[i, 2] = -guide[i];
+            matrix[i, 2] = -1 * guide[i];
         }
 
         matrix = FindInverseMatrix(matrix);
 
         Vector3 coefs = MultiplyMatrix3x3Vector3x1(matrix, secondVertex - _contactPoint);
-        return secondVertex + (secondVertex - firstVertex) * coefs[2];
+        return secondVertex + guide * coefs[2];
     }
 
     private float[,] FindInverseMatrix(float[,] matrix)
