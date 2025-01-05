@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class Plate : Projectile
@@ -8,6 +9,7 @@ public class Plate : Projectile
     private Vector3[] rotations = {new(0,-90,-90), new(0,90,0), new(0,0,90)};
     private int _rotIndex;
     private bool _underControl;
+    private Cutter _cutter = new Cutter();
     
     public override Vector3 VertDirection
     {
@@ -30,6 +32,15 @@ public class Plate : Projectile
         }
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Enemy"))
+        {
+            _cutter.SetCuttingParams(collision.GetContact(0).point, Velocity, Vector3.up, collision.gameObject);
+            _cutter.StartCutting();
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Obstacle"))
@@ -39,7 +50,7 @@ public class Plate : Projectile
 
         if (other.CompareTag("Enemy"))
         {
-            //Separate pieces
+            
         }
     }
 

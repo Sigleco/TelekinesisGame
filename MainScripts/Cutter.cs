@@ -34,7 +34,8 @@ public class Cutter: ICutter
 
     //Temporary function
     private void InstantiateObjects()
-    {
+    {   
+        _parentObject.SetActive(false);
         leftMesh = CreateNewMeshe(leftSides);
         GameObject obj = new GameObject();
         obj.transform.SetPositionAndRotation(_parentObject.transform.position, _parentObject.transform.rotation);
@@ -87,7 +88,7 @@ public class Cutter: ICutter
     {
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
         List<Vector3> triangle = GetTriangle(startTriangleIndex).ConvertAll(x => _mesh.vertices[_mesh.triangles[x]]);
-        bool result, logAnd = true, logOr = false;
+        bool logAnd = true, logOr = false;
 
         for (int i = 0; i < triangle.Count; i++)
         {
