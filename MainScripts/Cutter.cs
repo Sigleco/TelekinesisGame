@@ -22,12 +22,12 @@ public class Cutter: ICutter
     public void SetCuttingParams(Vector3 contactPoint, Vector3 planeTangent1, Vector3 planeTangent2, GameObject cuttingObj)
     {
         _parentObject = cuttingObj;
-        _contactPoint = _parentObject.transform.InverseTransformPoint(contactPoint);
-        _dirV = _parentObject.transform.InverseTransformVector(planeTangent1);
-        _dirU = _parentObject.transform.InverseTransformVector(planeTangent2);
-        
+
         if (_parentObject != null)
         {
+            _contactPoint = _parentObject.transform.InverseTransformPoint(contactPoint);
+            _dirV = _parentObject.transform.InverseTransformVector(planeTangent1).normalized;
+            _dirU = _parentObject.transform.InverseTransformVector(planeTangent2).normalized;
             MeshFilter filter = _parentObject.GetComponent<MeshFilter>();
             _mesh = filter.mesh;
         }
@@ -81,10 +81,48 @@ public class Cutter: ICutter
                 PutTriangleToSide(i);
             }
         }
-        
-        AddLastSide(checkedVectors.Distinct().ToList(), ref leftSides, ref rightSides);
+
+        checkedVectors = checkedVectors.Distinct().ToList();
+        AddLastSide(DeleteCollinearVertices(ref checkedVectors), ref leftSides, ref rightSides);
     }
-    
+
+    private List<Vector3> DeleteCollinearVertices(ref List<Vector3> vertices)
+    {   
+        Vector3 vector1 = vertices[0];
+        for (int i = 1; i < vertices.Count - 1; i++)
+        {   
+            Vector3 vector2 = vertices[i];
+            for (int j = i + 1; j < vertices.Count; j++)
+            {
+                Vector3 vector3 = vertices[j],
+                    temp1 = vector1 - vector2,
+                    temp2 = vector1 - vector3;
+        
+                if (IsCollinear(temp1, temp2))
+                {
+                    if (temp1.sqrMagnitude > temp2.sqrMagnitude)
+                    {
+                        vertices.RemoveAt(j);
+                        j--;
+                    }
+                    else
+                    {
+                        vertices.RemoveAt(i);
+                        i--;
+                        i = Mathf.Clamp(i, 1, vertices.Count - 1);
+                    }
+                }
+            }    
+        }
+
+        return vertices;
+    }
+
+    private bool IsCollinear(Vector3 vector1, Vector3 vector2)
+    {
+        return Vector3.Cross(vector1, vector2).sqrMagnitude <= 0.001f;
+    }
+
     private bool IsTriangleDivided(int startTriangleIndex)
     {
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
@@ -278,7 +316,7 @@ public class Cutter: ICutter
             nm *= -1;
         }
 
-        int[] triangles = CreateTriangles(vertices, nm);
+        int[] triangles = CreateTrianglesForLastSide(vertices, nm);
         
         Array.Fill(normals, nm);
         Vector3 temp = vertices[0] - vertices[1];
@@ -294,7 +332,7 @@ public class Cutter: ICutter
         oppositeSides.Add(new Side(triangles, vertices.ToArray(), (Vector3[])normals.Clone(), tangents));
     }
     
-    private int[] CreateTriangles(List<Vector3> vertices, Vector3 normal)
+    private int[] CreateTrianglesForLastSide(List<Vector3> vertices, Vector3 normal)
     {
         int[] triangles = new int[(vertices.Count - 2) * 3];
         Vector3 mainLine = vertices[1] - vertices[0];
