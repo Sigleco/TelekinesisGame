@@ -21,10 +21,11 @@ public class Cutter: ICutter
 
     public void SetCuttingParams(Vector3 contactPoint, Vector3 planeTangent1, Vector3 planeTangent2, GameObject cuttingObj)
     {
-        _contactPoint = contactPoint;
-        _dirV = planeTangent1;
-        _dirU = planeTangent2;
         _parentObject = cuttingObj;
+        _contactPoint = _parentObject.transform.InverseTransformPoint(contactPoint);
+        _dirV = _parentObject.transform.InverseTransformVector(planeTangent1);
+        _dirU = _parentObject.transform.InverseTransformVector(planeTangent2);
+        
         if (_parentObject != null)
         {
             MeshFilter filter = _parentObject.GetComponent<MeshFilter>();
