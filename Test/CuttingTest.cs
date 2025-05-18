@@ -88,6 +88,10 @@ public class EnumeratorTest : MonoBehaviour
                 PutTriangleToSide(i);
             }
         }
+    
+        MagnitudeTest(checkedVectors.Distinct().ToList());
+        CoplanarityTest(checkedVectors.Distinct().ToList());
+        FullRotationTest(checkedVectors.Distinct().ToList());
         
         AddLastSide(checkedVectors.Distinct().ToList(), ref leftSides, ref rightSides);
     }
@@ -687,5 +691,63 @@ public class EnumeratorTest : MonoBehaviour
         }
 
         return result;
+    }
+
+    //Tests Sector
+    
+    private void MagnitudeTest(List<Vector3> vertices)
+    {
+        float length = 0.5f, maxError = 0.01f;
+        int counter = 0;
+        
+        for (int i = 0; i < vertices.Count; i++)
+        {
+            if (vertices[i].magnitude <= length * (1 + maxError) &&
+                vertices[i].magnitude >= length * (1 - maxError))
+            {
+                counter++;
+            }
+        }
+        
+        Debug.Log("Vertices in range " + counter + "/" + vertices.Count);
+    }
+
+    private void CoplanarityTest(List<Vector3> vertices)
+    {
+        int counter = 0;
+        Vector3 normal = Vector3.Cross(vertices[0], vertices[1]);
+
+        for (int i = 2; i < vertices.Count; i++)
+        {
+            if (Mathf.Abs(Vector3.Dot(normal, vertices[i])) <=  0.01f)
+            {
+                counter++;
+            }
+        }
+        
+        Debug.Log("Coplanar vertices" + (counter + 2) + "/" + vertices.Count);
+    }
+
+    private void FullRotationTest(List<Vector3> vertices)
+    {
+        float angle = 0;
+        Vector3 normal = Vector3.Cross(vertices[0], vertices[1]);
+        List<(Vector3, float)> vertexAngelMap = new List<(Vector3, float)>();
+
+        for (int i = 0; i < vertices.Count; i++)
+        {
+            vertexAngelMap.Add((vertices[i], Vector3.SignedAngle(vertices[0], vertices[i], normal)));
+        }
+        
+        vertexAngelMap.Sort(Comparer<(Vector3, float)>.Create((p1, p2) => p1.Item2.CompareTo(p2.Item2)));
+
+        for (int i = 0; i < vertexAngelMap.Count-1; i++)
+        {
+            angle += Vector3.SignedAngle(vertexAngelMap[i].Item1, vertexAngelMap[i+1].Item1, normal);
+        }
+        
+        angle += Vector3.SignedAngle(vertexAngelMap[^1].Item1, vertexAngelMap[0].Item1, normal);
+        
+        Debug.Log("Angle around axis is " + angle + " degrees");
     }
 }

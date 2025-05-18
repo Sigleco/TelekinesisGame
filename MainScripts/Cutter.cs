@@ -120,7 +120,7 @@ public class Cutter: ICutter
 
     private bool IsCollinear(Vector3 vector1, Vector3 vector2)
     {
-        return Vector3.Cross(vector1, vector2).sqrMagnitude <= 0.001f;
+        return Vector3.Cross(vector1, vector2).magnitude <= 0.0000001f;
     }
 
     private bool IsTriangleDivided(int startTriangleIndex)
@@ -316,7 +316,7 @@ public class Cutter: ICutter
             nm *= -1;
         }
 
-        int[] triangles = CreateTrianglesForLastSide(vertices, nm);
+        int[] triangles = CreateTrianglesForLastSide(ref vertices, nm);
         
         Array.Fill(normals, nm);
         Vector3 temp = vertices[0] - vertices[1];
@@ -332,11 +332,12 @@ public class Cutter: ICutter
         oppositeSides.Add(new Side(triangles, vertices.ToArray(), (Vector3[])normals.Clone(), tangents));
     }
     
-    private int[] CreateTrianglesForLastSide(List<Vector3> vertices, Vector3 normal)
+    private int[] CreateTrianglesForLastSide(ref List<Vector3> vertices, Vector3 normal)
     {
         int[] triangles = new int[(vertices.Count - 2) * 3];
         Vector3 mainLine = vertices[1] - vertices[0];
-        List<(Vector3, int, float)> maps = vertices.ConvertAll(x => (x, vertices.IndexOf(x), 0f));
+        List<Vector3> temp = vertices;
+        List<(Vector3, int, float)> maps = vertices.ConvertAll(x => (x, temp.IndexOf(x), 0f));
         for (int i = 2; i < vertices.Count; i++)
         {
             maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[i] - vertices[0],  normal));
@@ -351,6 +352,8 @@ public class Cutter: ICutter
             triangles[3 * i + 2] = maps[i + 2].Item2;
         }
 
+        vertices = maps.ConvertAll(x => x.Item1);
+        
         return triangles;
     }
     
