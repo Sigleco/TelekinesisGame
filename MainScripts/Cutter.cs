@@ -182,7 +182,7 @@ public class Cutter: ICutter
         
         for(int i = 0; i < 3; i++)
         {
-            float temp = Vector3.Dot(crossProduct, _contactPoint + vertices[i]) / crossProduct.magnitude;
+            float temp = Vector3.Dot(crossProduct, vertices[i] - _contactPoint);
             if (temp >= 0)
             {
                 leftProps.Add(vertices[i]);

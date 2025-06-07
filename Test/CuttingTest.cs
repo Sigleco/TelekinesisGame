@@ -89,11 +89,11 @@ public class EnumeratorTest : MonoBehaviour
             }
         }
     
-        MagnitudeTest(checkedVectors.Distinct().ToList());
-        CoplanarityTest(checkedVectors.Distinct().ToList());
-        FullRotationTest(checkedVectors.Distinct().ToList());
-        
-        AddLastSide(checkedVectors.Distinct().ToList(), ref leftSides, ref rightSides);
+        MagnitudeTest(checkedVectors.Distinct(new Vector3Comparer()).ToList());
+        CoplanarityTest(checkedVectors.Distinct(new Vector3Comparer()).ToList());
+        FullRotationTest(checkedVectors.Distinct(new Vector3Comparer()).ToList());
+
+        AddLastSide(checkedVectors.Distinct(new Vector3Comparer()).ToList(), ref leftSides, ref rightSides);
     }
     
     private bool IsTriangleDivided(int startTriangleIndex)
@@ -155,7 +155,7 @@ public class EnumeratorTest : MonoBehaviour
         
         for(int i = 0; i < 3; i++)
         {
-            float temp = Vector3.Dot(crossProduct, _contactPoint + vertices[i]) / crossProduct.magnitude;
+            float temp = Vector3.Dot(crossProduct, vertices[i] - _contactPoint);
             if (temp >= 0)
             {
                 leftProps.Add(vertices[i]);
@@ -230,7 +230,7 @@ public class EnumeratorTest : MonoBehaviour
             signedAngles.Add((Vector3.SignedAngle(mainLine, vertices[i] - vertices[0], normal), vertices[i], normals[i], tangents[i]));
         }
         
-        signedAngles.Sort(1, signedAngles.Count - 1, Comparer<(float, Vector3, Vector3, Vector4)>.Create((p1, p2) => p1.Item1.CompareTo(p2.Item1)));
+        signedAngles.Sort(/*1, signedAngles.Count - 1,*/ Comparer<(float, Vector3, Vector3, Vector4)>.Create((p1, p2) => p1.Item1.CompareTo(p2.Item1)));
 
         for (int i = 0; i < signedAngles.Count - 2; i++)
         {
@@ -249,7 +249,7 @@ public class EnumeratorTest : MonoBehaviour
     {
         Vector3[] vertices = side.GetVertices();
         Vector3 normal = Vector3.Cross(vertices[^1] - vertices[0], vertices[^2] - vertices[0]);
-        if (Vector3.Dot(normal, side.GetNormals()[0]) >= 0)
+        if (Vector3.Dot(normal, side.GetNormals()[0]) > 0)
         {
             return normal;
         }
@@ -502,7 +502,7 @@ public class EnumeratorTest : MonoBehaviour
             angles[i] = Vector3.Angle(nm, sideVertices[i] - vertices[0]);
         }
 
-        if (angles[0] < 90 && angles[1] < 90)
+        if (angles[0] < 90 || angles[1] < 90)
         {
             nm *= -1;
         }
@@ -533,7 +533,7 @@ public class EnumeratorTest : MonoBehaviour
             maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[i] - vertices[0],  normal));
         }
         
-        maps.Sort(1, maps.Count - 1, Comparer<(Vector3, int, float)>.Create((p1, p2) => p1.Item3.CompareTo(p2.Item3)));
+        maps.Sort(/*1, maps.Count - 1,*/ Comparer<(Vector3, int, float)>.Create((p1, p2) => p1.Item3.CompareTo(p2.Item3)));
 
         for (int i = 0; i < maps.Count - 2; i++)
         {
@@ -749,5 +749,35 @@ public class EnumeratorTest : MonoBehaviour
         angle += Vector3.SignedAngle(vertexAngelMap[^1].Item1, vertexAngelMap[0].Item1, normal);
         
         Debug.Log("Angle around axis is " + angle + " degrees");
+    }
+}
+
+public class Vector3Comparer : IEqualityComparer<Vector3>
+{
+    private readonly float epsilon;
+
+    public Vector3Comparer(float epsilon = 0.0001f)
+    {
+        this.epsilon = epsilon;
+    }
+
+    public bool Equals(Vector3 v1, Vector3 v2)
+    {
+        return Vector3.SqrMagnitude(v1 - v2) < epsilon * epsilon;
+    }
+
+    public int GetHashCode(Vector3 v)
+    {
+
+        int x = Mathf.RoundToInt(v.x / epsilon);
+        int y = Mathf.RoundToInt(v.y / epsilon);
+        int z = Mathf.RoundToInt(v.z / epsilon);
+        
+        int hash = 17;
+        hash = hash * 31 + x;
+        hash = hash * 31 + y;
+        hash = hash * 31 + z;
+
+        return hash;
     }
 }
