@@ -1,13 +1,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 public class EnumeratorTest : MonoBehaviour
 {
-    private Vector3 _contactPoint = new Vector3(0, 0, 0.2f);
+    private Vector3 _contactPoint = new Vector3(0, 0.5f, 0);
     private Vector3 _dirV = Vector3.right;
     private Vector3 _dirU = Vector3.up;
     private Mesh _mesh;
@@ -24,7 +25,7 @@ public class EnumeratorTest : MonoBehaviour
         leftMesh = new Mesh();
         rightMesh = new Mesh();
     }
-    
+
     private void OnDrawGizmos()
     {
         if (checkedVectors == null || checkedVectors.Count == 0)
@@ -44,40 +45,42 @@ public class EnumeratorTest : MonoBehaviour
             Gizmos.DrawLine(transform.position + checkedVectors[i], transform.position + checkedVectors[i + 1]);
         }
     }
-    
+
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
             TriangleDivide();
-            leftMesh = CreateNewMeshes(leftSides);
-            GameObject obj = new GameObject { transform = {position = Vector3.right * 1f}};
+            leftMesh = CreateNewMesh(leftSides);
+            //leftMesh = CreateMeshFromSide(leftSides[5]);
+            GameObject obj = new GameObject {transform = {position = Vector3.right * 1f}};
             MeshFilter filter = obj.AddComponent<MeshFilter>();
             filter.mesh = leftMesh;
             MeshRenderer rend = obj.AddComponent<MeshRenderer>();
             rend.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
             obj.AddComponent<BoxCollider>();
-            
-            rightMesh = CreateNewMeshes(rightSides);
-            GameObject obj1 = new GameObject { transform = {position = Vector3.right * 2f}};
+
+            rightMesh = CreateNewMesh(rightSides);
+            GameObject obj1 = new GameObject {transform = {position = Vector3.right * 2f}};
             MeshFilter filter1 = obj1.AddComponent<MeshFilter>();
             filter1.mesh = rightMesh;
             MeshRenderer rend1 = obj1.AddComponent<MeshRenderer>();
             rend1.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
             obj1.AddComponent<BoxCollider>();
+
+            //LogData(leftSides, leftMesh);
         }
     }
-    
+
     private void TriangleDivide()
     {
-        Side leftSide = new Side(), rightSide = new Side();
         for (int i = 0; i < _mesh.triangles.Length; i += 3)
         {
             if (IsTriangleDivided(i))
             {
-                DivideTriangle(i, out leftSide, out rightSide);
+                DivideTriangle(i, out var leftSide, out var rightSide);
                 AddNewVerticesProperties(ref leftSide, ref rightSide);
-                CreateNewTriangles(ref leftSide, GetNormal(leftSide, i)); 
+                CreateNewTriangles(ref leftSide, GetNormal(leftSide, i));
                 CreateNewTriangles(ref rightSide, GetNormal(rightSide, i));
                 leftSides.Add(leftSide);
                 rightSides.Add(rightSide);
@@ -87,14 +90,16 @@ public class EnumeratorTest : MonoBehaviour
                 PutTriangleToSide(i);
             }
         }
-    
+
+        //MergeCoplanarFaces();
+
         MagnitudeTest(checkedVectors.Distinct(new Vector3Comparer()).ToList());
         CoplanarityTest(checkedVectors.Distinct(new Vector3Comparer()).ToList());
         FullRotationTest(checkedVectors.Distinct(new Vector3Comparer()).ToList());
 
         AddLastSide(checkedVectors.Distinct(new Vector3Comparer()).ToList(), ref leftSides, ref rightSides);
     }
-    
+
     private bool IsTriangleDivided(int startTriangleIndex)
     {
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
@@ -130,16 +135,16 @@ public class EnumeratorTest : MonoBehaviour
         Vector3[] vertices = triangle.ConvertAll(x => _mesh.vertices[_mesh.triangles[x]]).ToArray();
         Vector3[] normals = triangle.ConvertAll(x => _mesh.normals[_mesh.triangles[x]]).ToArray();
         Vector4[] tangents = triangle.ConvertAll(x => _mesh.tangents[_mesh.triangles[x]]).ToArray();
-        
+
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
         float temp = Vector3.Dot(crossProduct, _contactPoint + vertices[0]) / crossProduct.magnitude;
         if (temp >= 0)
         {
-            leftSides.Add(new Side(new []{0, 1, 2}, vertices, normals, tangents));
+            leftSides.Add(new Side(new[] {0, 1, 2}, vertices, normals, tangents));
         }
         else
         {
-            rightSides.Add(new Side(new []{0, 1, 2}, vertices, normals, tangents));
+            rightSides.Add(new Side(new[] {0, 1, 2}, vertices, normals, tangents));
         }
     }
 
@@ -151,8 +156,8 @@ public class EnumeratorTest : MonoBehaviour
         List<Vector4> leftTangents = new List<Vector4>(),
             rightTangents = new List<Vector4>();
         Vector3 crossProduct = Vector3.Cross(_dirU, _dirV);
-        
-        for(int i = 0; i < 3; i++)
+
+        for (int i = 0; i < 3; i++)
         {
             float temp = Vector3.Dot(crossProduct, vertices[i] - _contactPoint);
             if (temp >= 0)
@@ -173,7 +178,7 @@ public class EnumeratorTest : MonoBehaviour
             leftProps.Where((value, index) => index % 2 == 0).ToArray(),
             leftProps.Where((value, index) => index % 2 == 1).ToArray(),
             leftTangents.ToArray());
-        
+
         rightSide = new Side(new int[leftProps.Count],
             rightProps.Where((value, index) => index % 2 == 0).ToArray(),
             rightProps.Where((value, index) => index % 2 == 1).ToArray(),
@@ -189,24 +194,24 @@ public class EnumeratorTest : MonoBehaviour
         Vector3[] newVertices = new Vector3[2];
         Vector3[] newNormals = new Vector3[2];
         Vector4[] newTangents = new Vector4[2];
-        
+
         for (int i = 0; i < leftVertices.Length; i++)
         {
             for (int j = 0; j < rightVertices.Length; j++)
             {
-                newVertices[i+j] = ComputeIntersectionPoint(leftVertices[i], rightVertices[j]);
-                newNormals[i+j] = ComputeNormal(leftNormals[i], rightNormals[j]);
-                newTangents[i+j] = leftSide.GetTangents()[0];
+                newVertices[i + j] = ComputeIntersectionPoint(leftVertices[i], rightVertices[j]);
+                newNormals[i + j] = ComputeNormal(leftNormals[i], rightNormals[j]);
+                newTangents[i + j] = leftSide.GetTangents()[0];
             }
         }
-        
+
         checkedVectors.AddRange(newVertices);
-        
+
         leftSide = new Side(new int[leftVertices.Length + 2],
             leftVertices.Concat(newVertices).ToArray(),
             leftNormals.Concat(newNormals).ToArray(),
             leftSide.GetTangents().Concat(newTangents).ToArray());
-        
+
         rightSide = new Side(new int[rightVertices.Length + 2],
             rightVertices.Concat(newVertices).ToArray(),
             rightNormals.Concat(newNormals).ToArray(),
@@ -226,10 +231,12 @@ public class EnumeratorTest : MonoBehaviour
 
         for (int i = 2; i < vertices.Length; i++)
         {
-            signedAngles.Add((Vector3.SignedAngle(mainLine, vertices[i] - vertices[0], normal), vertices[i], normals[i], tangents[i]));
+            signedAngles.Add((Vector3.SignedAngle(mainLine, vertices[i] - vertices[0], normal), vertices[i], normals[i],
+                tangents[i]));
         }
-        
-        signedAngles.Sort(/*1, signedAngles.Count - 1,*/ Comparer<(float, Vector3, Vector3, Vector4)>.Create((p1, p2) => p1.Item1.CompareTo(p2.Item1)));
+
+        signedAngles.Sort( 1, signedAngles.Count - 1,
+            Comparer<(float, Vector3, Vector3, Vector4)>.Create((p1, p2) => p1.Item1.CompareTo(p2.Item1)));
 
         for (int i = 0; i < signedAngles.Count - 2; i++)
         {
@@ -242,6 +249,11 @@ public class EnumeratorTest : MonoBehaviour
             signedAngles.ConvertAll(x => x.Item2).ToArray(),
             signedAngles.ConvertAll(x => x.Item3).ToArray(),
             signedAngles.ConvertAll(x => x.Item4).ToArray());
+    }
+
+    private void MergeCoplanarFaces()
+    {
+        
     }
 
     private Vector3 GetNormal(Side side, int triangleIndex)
@@ -325,7 +337,7 @@ public class EnumeratorTest : MonoBehaviour
         return triangles;
     }
     
-    private Mesh CreateNewMeshes(List<Side> sides)
+    private Mesh CreateNewMesh(List<Side> sides)
     {
         Mesh newMesh = new Mesh();
         int vCounter = 0;
@@ -537,8 +549,41 @@ public class EnumeratorTest : MonoBehaviour
         
         Debug.Log("Angle around axis is " + angle + " degrees");
     }
+    
+    private void LogData(List<Side> sides, Mesh mesh)
+    {
+        int vertexCounter = 0;
+        for (int i = 0; i < sides.Count; i++)
+        {
+            Vector3[] vertices = sides[i].GetVertices();
+            for (int j = 0; j < vertices.Length; j++)
+            {
+                File.AppendAllText("C:/Users/pandr/UnityProjects/PhisicsTest/Assets/Test txt/Sides.txt", $"Side: {i} — Index: {vertexCounter} — Vertex: {vertices[j]}\n");
+                vertexCounter++;
+            }
+            File.AppendAllText("C:/Users/pandr/UnityProjects/PhisicsTest/Assets/Test txt/Sides.txt", "\n");
+        }
+
+        for (int i = 0; i < mesh.triangles.Length; i++)
+        {
+            File.AppendAllText("C:/Users/pandr/UnityProjects/PhisicsTest/Assets/Test txt/Triangles.txt", $"Triangle[{i}] — {mesh.triangles[i]}\n");
+        }
+    }
+    
+    public static Mesh CreateMeshFromSide(Side side)
+    {
+        Mesh mesh = new Mesh();
+
+        mesh.vertices = side.GetVertices();
+        mesh.triangles = side.GetTriangles();
+        mesh.normals = side.GetNormals();
+        mesh.tangents = side.GetTangents();
+
+        return mesh;
+    }
 }
 
+//Auxiliary classes
 public class Vector3Comparer : IEqualityComparer<Vector3>
 {
     private readonly float epsilon;
@@ -552,9 +597,7 @@ public class Vector3Comparer : IEqualityComparer<Vector3>
     {
         return Vector3.SqrMagnitude(v1 - v2) < epsilon * epsilon;
     }
-
     
-    //Auxiliary classes
     public int GetHashCode(Vector3 v)
     {
 
