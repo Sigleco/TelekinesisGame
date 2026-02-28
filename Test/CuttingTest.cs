@@ -6,7 +6,10 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class EnumeratorTest : MonoBehaviour
+//TODO: для каждой вершины проверитькуда нправлна нормаль. Если сумма вектора вершины и нормали увеличивается, то все норм, если уменьшается, то надо разбираться
+//Возможно нормаль считается относительно невереной системы координат
+
+public class EnumeratorTestRefactored : MonoBehaviour
 {
     private Vector3 _contactPoint = new Vector3(0, 0.5f, 0);
     private Vector3 _dirV = Vector3.right;
@@ -16,6 +19,8 @@ public class EnumeratorTest : MonoBehaviour
     private List<Vector3> checkedVectors = new List<Vector3>();
     private List<Side> leftSides = new List<Side>();
     private List<Side> rightSides = new List<Side>();
+    private List<Side> rightRing = new List<Side>();
+    private List<Side> leftRing = new List<Side>();
     private Mesh leftMesh, rightMesh;
 
     private void Start()
@@ -51,8 +56,7 @@ public class EnumeratorTest : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             TriangleDivide();
-            leftMesh = CreateNewMesh(leftSides);
-            //leftMesh = CreateMeshFromSide(leftSides[5]);
+            leftMesh = CreateNewMesh(leftRing);
             GameObject obj = new GameObject {transform = {position = Vector3.right * 1f}};
             MeshFilter filter = obj.AddComponent<MeshFilter>();
             filter.mesh = leftMesh;
@@ -68,6 +72,7 @@ public class EnumeratorTest : MonoBehaviour
             rend1.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
             obj1.AddComponent<BoxCollider>();
 
+            CheckNormalsTest(leftMesh);
             //LogData(leftSides, leftMesh);
         }
     }
@@ -80,8 +85,8 @@ public class EnumeratorTest : MonoBehaviour
             {
                 DivideTriangle(i, out var leftSide, out var rightSide);
                 AddNewVerticesProperties(ref leftSide, ref rightSide);
-                CreateNewTriangles(ref leftSide, GetNormal(leftSide, i));
-                CreateNewTriangles(ref rightSide, GetNormal(rightSide, i));
+                CreateTriangles(ref leftSide, GetFaceNormal(leftSide));
+                CreateTriangles(ref rightSide, GetFaceNormal(rightSide));
                 leftSides.Add(leftSide);
                 rightSides.Add(rightSide);
             }
@@ -218,21 +223,39 @@ public class EnumeratorTest : MonoBehaviour
             rightSide.GetTangents().Concat(newTangents).ToArray());
     }
 
-    private void CreateNewTriangles(ref Side side, Vector3 normal)
+    private void CreateTriangles(ref Side side, Vector3 normal)
     {
+        Vector3 mainLine = Vector3.forward;
         Vector3[] vertices = side.GetVertices(),
             normals = side.GetNormals();
         Vector4[] tangents = side.GetTangents();
         int[] triangles = new int[(vertices.Length - 2) * 3];
-        Vector3 mainLine = vertices[1] - vertices[0];
+        
         List<(float, Vector3, Vector3, Vector4)> signedAngles = new List<(float, Vector3, Vector3, Vector4)>();
-        signedAngles.Add((0, vertices[0], normals[0], tangents[0]));
-        signedAngles.Add((0, vertices[1], normals[1], tangents[1]));
+        float[] temp = new float[vertices.Length - 1];
 
-        for (int i = 2; i < vertices.Length; i++)
+        for (int i = 1; i < vertices.Length; i++)
         {
-            signedAngles.Add((Vector3.SignedAngle(mainLine, vertices[i] - vertices[0], normal), vertices[i], normals[i],
-                tangents[i]));
+            mainLine = vertices[i] - vertices[0];
+            for (int j = 1; j < vertices.Length; j++)
+            {
+                temp[j-1] = Vector3.SignedAngle(mainLine, vertices[j] - vertices[0], normal);
+            }
+            
+            bool allPositiveOrZero = temp.All(x => x >= 0);
+            //bool allNegativeOrZero = temp.All(x => x <= 0);
+
+            if (allPositiveOrZero/* || allNegativeOrZero*/)
+            {
+                break;
+            }
+        }
+
+        signedAngles.Add((0, vertices[0], normals[0], tangents[0]));
+
+        for (int i = 1; i < vertices.Length; i++)
+        {
+            signedAngles.Add((temp[i-1], vertices[i], normals[i], tangents[i]));
         }
 
         signedAngles.Sort( 1, signedAngles.Count - 1,
@@ -256,7 +279,7 @@ public class EnumeratorTest : MonoBehaviour
         
     }
 
-    private Vector3 GetNormal(Side side, int triangleIndex)
+    private Vector3 GetFaceNormal(Side side)
     {
         Vector3[] vertices = side.GetVertices();
         Vector3 normal = Vector3.Cross(vertices[^1] - vertices[0], vertices[^2] - vertices[0]);
@@ -273,7 +296,12 @@ public class EnumeratorTest : MonoBehaviour
         Vector3 temp = (firstPoint + secondPoint).normalized;
         Vector3 cross = Vector3.Cross(_dirU, _dirV).normalized;
         Vector3 normal = temp - Vector3.Dot(temp, cross) * cross;
-        return normal.normalized;
+        if (Vector3.Dot(normal, firstPoint) > 0 && Vector3.Dot(normal, secondPoint) > 0)
+        {
+            return normal.normalized;
+        }
+        
+        return  -1 * normal.normalized;
     }
     
     private void AddLastSide(List<Vector3> vertices, ref List<Side> sides, ref List<Side> oppositeSides)
@@ -318,14 +346,31 @@ public class EnumeratorTest : MonoBehaviour
     private int[] CreateTriangles(List<Vector3> vertices, Vector3 normal)
     {
         int[] triangles = new int[(vertices.Count - 2) * 3];
-        Vector3 mainLine = vertices[1] - vertices[0];
+        float[] temp = new float[vertices.Count - 1];
+        Vector3 mainLine = Vector3.forward;
         List<(Vector3, int, float)> maps = vertices.ConvertAll(x => (x, vertices.IndexOf(x), 0f));
-        for (int i = 2; i < vertices.Count; i++)
+    
+        for (int i = 1; i < vertices.Count; i++)
         {
-            maps[i] = (maps[i].Item1, maps[i].Item2, Vector3.SignedAngle(mainLine, vertices[i] - vertices[0],  normal));
+            mainLine = vertices[i] - vertices[0];
+            for (int j = 1; j < vertices.Count; j++)
+            {
+                temp[j - 1] = Vector3.SignedAngle(mainLine, vertices[j] - vertices[0], normal);
+            }
+
+            bool allPositiveOrZero = temp.All(x => x >= 0);
+            if (allPositiveOrZero)
+            {
+                break;
+            }
         }
-        
-        maps.Sort(/*1, maps.Count - 1,*/ Comparer<(Vector3, int, float)>.Create((p1, p2) => p1.Item3.CompareTo(p2.Item3)));
+
+        for (int i = 1; i < vertices.Count; i++)
+        {
+            maps[i] = (maps[i].Item1, maps[i].Item2, temp[i - 1]);
+        }
+
+        maps.Sort(1, maps.Count - 1, Comparer<(Vector3, int, float)>.Create((p1, p2) => p1.Item3.CompareTo(p2.Item3)));
 
         for (int i = 0; i < maps.Count - 2; i++)
         {
@@ -334,9 +379,24 @@ public class EnumeratorTest : MonoBehaviour
             triangles[3 * i + 2] = maps[i + 2].Item2;
         }
 
+        // 🔍 Финальная проверка направления нормали первого треугольника
+        Vector3 a = vertices[triangles[0]];
+        Vector3 b = vertices[triangles[1]];
+        Vector3 c = vertices[triangles[2]];
+        Vector3 triNormal = Vector3.Cross(b - a, c - a).normalized;
+
+        if (Vector3.Dot(triNormal, normal) < 0f)
+        {
+            // 🔄 Переворачиваем все треугольники
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                (triangles[i + 1], triangles[i + 2]) = (triangles[i + 2], triangles[i + 1]);
+            }
+        }
+
         return triangles;
     }
-    
+
     private Mesh CreateNewMesh(List<Side> sides)
     {
         Mesh newMesh = new Mesh();
@@ -376,7 +436,7 @@ public class EnumeratorTest : MonoBehaviour
                 _triangles[trCounter + 3 * j + 1] = tr[3 * j + 1] + vCounter;
                 _triangles[trCounter + 3 * j + 2] = tr[3 * j + 2] + vCounter;
             }
-
+            
             vCounter += tempV.Length;
             trCounter += tr.Length;
         }
@@ -485,8 +545,20 @@ public class EnumeratorTest : MonoBehaviour
         return result;
     }
 
-    //Tests Sector
-    
+    //Test and temporary functions
+
+    private void CheckNormalsTest(Mesh mesh)
+    {
+        Vector3[] vertices = mesh.vertices, normals = mesh.normals;
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            if ((vertices[i].normalized + normals[i].normalized).magnitude <= 1.414f)
+            {
+                    Debug.Log(i);
+            }
+        }
+    }
+
     private void MagnitudeTest(List<Vector3> vertices)
     {
         float length = 0.5f, maxError = 0.01f;
@@ -527,11 +599,6 @@ public class EnumeratorTest : MonoBehaviour
         Vector3 normal = Vector3.forward;
         List<(Vector3, float)> vertexAngelMap = new List<(Vector3, float)>();
 
-        for (int i = 0; i < vertices.Count; i++)
-        {
-            vertices[i] -=  _contactPoint;
-        }
-        
         for (int i = 0; i < vertices.Count; i++)
         {
             vertexAngelMap.Add((vertices[i], Vector3.SignedAngle(vertices[0], vertices[i], normal)));
@@ -580,6 +647,46 @@ public class EnumeratorTest : MonoBehaviour
         mesh.tangents = side.GetTangents();
 
         return mesh;
+    }
+
+    private void CheckRotation()
+    {
+        for (int i = 0; i < leftSides.Count; i++)
+        {
+            (Vector3[] vertices, float[] coefs) = ProjectOnPlane(leftSides[i]);
+            int[] trianglesIndices = leftSides[i].GetTriangles();
+
+            Vector3 normal = GetFaceNormal(leftSides[i]);
+            Vector3 dividerPlaneNormal = Vector3.Cross(_dirU, _dirV).normalized;
+
+            if (Vector3.Dot(normal, dividerPlaneNormal) <= 0)
+            {
+                dividerPlaneNormal = -1 * dividerPlaneNormal;
+            }
+
+            for (int j = 0; j < trianglesIndices.Length; j+=3)
+            {
+                Vector3.SignedAngle(vertices[trianglesIndices[j+1]] - vertices[trianglesIndices[j]],
+                    vertices[trianglesIndices[j+2]] - vertices[trianglesIndices[j]], 
+                    -coefs[j] * dividerPlaneNormal);
+            }
+        }
+    }
+
+    private (Vector3[],float[]) ProjectOnPlane(Side side)
+    {
+        Vector3[] vertices = side.GetVertices();
+        int[] triangles = side.GetTriangles();
+        Vector3 normal = Vector3.Cross(_dirU, _dirV).normalized;
+        float[] coefs = new float[vertices.Length];
+        
+        for (int i = 0; i < vertices.Length; i++)
+        { 
+            coefs[i] = Vector3.Dot(normal, vertices[i] - _contactPoint)/normal.magnitude;
+            vertices[i] = vertices[i] - coefs[i] * normal;
+        }
+
+        return (vertices, coefs);
     }
 }
 
