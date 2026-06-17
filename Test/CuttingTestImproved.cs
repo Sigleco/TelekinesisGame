@@ -39,20 +39,20 @@ public class TrianglePoint : ITrianglePoint
 
     public Vector3 Vertex
     {
-        get { return _vertex; }
-        set { value = _vertex; }
+        get => _vertex;
+        set => _vertex = value;
     }
     
     public Vector3 Normal
     {
-        get { return _normal; }
-        set { value = _normal; }
+        get => _normal;
+        set => _normal = value;
     }
 
     public Vector4 Tangent
     {
-        get { return _tangent; }
-        set { value = _tangent; }
+        get => _tangent;
+        set => _tangent = value;
     }
 
     public void SetProperties(Vector3 vertex, Vector3 normal, Vector4 tangent)
