@@ -11,10 +11,15 @@ public class CuttingTestImproved : MonoBehaviour
     private TriangleDivider divider;
     private TriangleBuilder builder;
     private readonly ContactData _contactData = new ContactData();
+    private Mesh _mesh;
+    private Mesh leftMesh, rightMesh;
+    private MeshFilter _filter;
     
     private void Start()
     {
-        _contactData.DirV = Vector3.right;
+        _filter = gameObject.GetComponent<MeshFilter>();
+        _mesh = _filter.mesh;
+        _contactData.DirV = Vector3.forward;
         _contactData.DirU = Vector3.up;
         _contactData.ContactPoint = new Vector3(0, 0.5f, 0);
         divider = new TriangleDivider(_contactData);
@@ -24,11 +29,87 @@ public class CuttingTestImproved : MonoBehaviour
 
     private void Compute()
     {
-        List<ITrianglePoint>[] newPoints = divider.DivideTriangle(Triangle.Create(new []{new Vector3(0.5f, 0.5f, 0.5f), new Vector3(0.5f,0.5f,-0.5f), new Vector3(-0.5f, 0.5f, -0.5f)},
-            new []{Vector3.up, Vector3.up, Vector3.up}, new []{new Vector4(1, 0 , 0, 1), new Vector4(1,0,0), new Vector4(1, 0, 0)}, new []{0,1,2}));
+        List<ITrianglePoint>[] newPoints = divider.DivideTriangle(Triangle.Create(
+            new[] {new Vector3(0.5f, 0.5f, 0.5f), new Vector3(0.5f, 0.5f, -0.5f), new Vector3(-0.5f, 0.5f, -0.5f)},
+            new[] {Vector3.up, Vector3.up, Vector3.up},
+            new[] {new Vector4(1, 0, 0, 1), new Vector4(1, 0, 0), new Vector4(1, 0, 0)}, new[] {0, 1, 2}));
 
-        List<Triangle> newTriangles = builder.BuildTriangles(newPoints);
+        List<ITrianglePoint> points = new List<ITrianglePoint>(3);
+        var p0 = new TrianglePoint();
+        p0.SetProperties(new Vector3(0.5f, 0.5f, 0.5f), Vector3.up, new Vector4(1, 0, 0, 1));
+        points.Add(p0);
+
+        var p1 = new TrianglePoint();
+        p1.SetProperties(new Vector3(0.5f, 0.5f, -0.5f), Vector3.up, new Vector4(1, 0, 0));
+        points.Add(p1);
+
+        var p2 = new TrianglePoint();
+        p2.SetProperties(new Vector3(-0.5f, 0.5f, -0.5f), Vector3.up, new Vector4(1, 0, 0));
+        points.Add(p2);
+
+        //List<Triangle> newTriangles = builder.BuildTriangles(newPoints);
+        List<Triangle>[] newTriangles = builder.BuildTrianglesTest(newPoints, points, new[]{2, 0, 1});
+
+        //leftMesh = CreateNewMesh(newTriangles[0]);
+        //GameObject obj = new GameObject {transform = {position = Vector3.right * 1f}};
+        //MeshFilter filter = obj.AddComponent<MeshFilter>();
+        //filter.mesh = leftMesh;
+        //MeshRenderer rend = obj.AddComponent<MeshRenderer>();
+        //rend.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
+        //obj.AddComponent<BoxCollider>();
+        //
+        //rightMesh = CreateNewMesh(newTriangles[1]);
+        //GameObject obj1 = new GameObject {transform = {position = Vector3.right * 2f}};
+        //MeshFilter filter1 = obj1.AddComponent<MeshFilter>();
+        //filter1.mesh = rightMesh;
+        //MeshRenderer rend1 = obj1.AddComponent<MeshRenderer>();
+        //rend1.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
+        //obj1.AddComponent<BoxCollider>();
+        
         Debug.Log("End");
+    }
+    
+    private Mesh CreateNewMesh(List<Triangle> triangles)
+    {
+        Mesh newMesh = new Mesh();
+        int vCounter = triangles.Count * 3;
+        int trCounter = triangles.Count * 3;
+
+        Vector3[] _vertices = new Vector3[vCounter];
+        Vector3[] _normals = new Vector3[vCounter];
+        Vector4[] _tangents = new Vector4[vCounter];
+        int[] _triangles = new int[trCounter];
+
+        vCounter = 0;
+        trCounter = 0;
+        for (int i = 0; i < triangles.Count; i++)
+        {
+            int lenght = triangles[i].Vertices.Length;
+            Array.Copy(triangles[i].Vertices, 0, _vertices, vCounter, lenght);
+
+            for (int j = 0; j < lenght; j++)
+            {
+                _normals[vCounter + j] = triangles[i].Normals[j];
+                _tangents[vCounter + j] = triangles[i].Tangents[j];
+            }
+            
+            for (int j = 0; j < lenght - 2; j++)
+            {
+                _triangles[trCounter + 3 * j] = triangles[i].Triangles[3 * j] + vCounter;
+                _triangles[trCounter + 3 * j + 1] = triangles[i].Triangles[3 * j + 1] + vCounter;
+                _triangles[trCounter + 3 * j + 2] = triangles[i].Triangles[3 * j + 2] + vCounter;
+            }
+            
+            vCounter += lenght;
+            trCounter += triangles[i].Triangles.Length;
+        }
+
+        newMesh.vertices = _vertices;
+        newMesh.normals = _normals;
+        newMesh.tangents = _tangents;
+        newMesh.triangles = _triangles;
+        
+        return newMesh;
     }
 }
 
@@ -145,24 +226,40 @@ public class TriangleBuilder : ITriangleBuilder
         Vector3 normal = Vector3.Cross(_dirU, _dirV);
         AddNewTrianglePoints(ref dividedPoints, _intersectionPointProvider);
 
-        for (int i = 0; i < dividedPoints.Count(); i++)
+        /*for (int i = 0; i < dividedPoints.Count(); i++)
         {
             triangles.Add(TransformToTriangle(
                 _triangulator.Triangulate(
                     GetCoordinatesInPlaneBasis(
                         ProjectOnPlane(dividedPoints[i], normal))),
                 dividedPoints[i]));
+        }*/
+        
+        //Тестовый цикл для отработки гипотезы без проекции сторон на плоскость
+        for (int i = 0; i < dividedPoints.Count(); i++)
+        {
+            List<Vector3> temp = dividedPoints[i].Select(p => p.GetVertex()).ToList();
+            triangles.Add(TransformToTriangle(
+                _triangulator.Triangulate(
+                    GetCoordinatesInPlaneBasisTest(temp)),
+                dividedPoints[i]));
         }
-
-        //foreach (var points in dividedPoints)
-        //{
-        //    triangles.Add(TransformToTriangle(
-        //        _triangulator.Triangulate(
-        //            GetCoordinatesInPlaneBasis(
-        //                ProjectOnPlane(points, normal))),
-        //        points));
-        //}
+        
         return triangles;
+    }
+    
+    public List<Triangle>[] BuildTrianglesTest(List<ITrianglePoint>[] dividedPoints, List<ITrianglePoint> points, int[] oldRotation)
+    {
+        List<Triangle> triangles = new List<Triangle>();
+        Vector3 normal = Vector3.Cross(_dirU, _dirV);
+        points.AddRange(FindNewTrianglePoints(dividedPoints, _intersectionPointProvider));
+        
+        
+        List<Vector3> temp = points.Select(p => p.GetVertex()).ToList();
+        return TransformToTriangleList(
+            _triangulator.Triangulate(
+                GetCoordinatesInPlaneBasisTest(temp)),
+            points, dividedPoints);
     }
 
     private Triangle TransformToTriangle(int[] rotation, List<ITrianglePoint> rotatedPoints)
@@ -179,6 +276,129 @@ public class TriangleBuilder : ITriangleBuilder
         
         return Triangle.Create(vertices.ToArray(), normals.ToArray(), tangents.ToArray(), rotation);
     }
+    
+    private Triangle TransformToTrianglesTest(int[] rotation, List<ITrianglePoint> rotatedPoints, int[] oldRotation)
+    {
+        Vector3[] vertices = new Vector3[3], normals = new Vector3[3];
+        Vector4[] tangents = new Vector4[3];
+
+        for (int i = 0; i < 3; i++)
+        {
+            vertices[oldRotation[i]] = rotatedPoints[i].GetVertex();
+            normals[oldRotation[i]] = rotatedPoints[i].GetNormal();
+            tangents[oldRotation[i]] = rotatedPoints[i].GetTangent();
+        }
+
+        rotation = AdjustRotation(rotation, oldRotation);
+        
+        return Triangle.Create(vertices.ToArray(), normals.ToArray(), tangents.ToArray(), rotation);
+    }
+
+    private List<Triangle>[] TransformToTriangleList(int[] rotation, List<ITrianglePoint> rotatedPoints,
+        List<ITrianglePoint>[] dividedPoints)
+    {
+        List<Triangle>[] triangles = new List<Triangle>[2];
+        triangles[0] = new List<Triangle>();
+        triangles[1] = new List<Triangle>();
+        List<int>[] rotations = new List<int>[2];
+        rotations[0] = new List<int>();
+        rotations[1] = new List<int>();
+        
+        for (int i = 0; i < 3; i++)
+        {
+            for (int k = 0; k < 3; k++)
+            {
+                if (rotation[3 * i + k] < 3)
+                {
+                    if (dividedPoints[0].Contains(rotatedPoints[rotation[3 * i + k]], TrianglePointComparer.Instance))
+                    {
+                        rotations[0].Add(rotation[3 * i]);
+                        rotations[0].Add(rotation[3 * i + 1]);
+                        rotations[0].Add(rotation[3 * i + 2]);
+                    }
+                    else if (dividedPoints[1].Contains(rotatedPoints[rotation[3 * i + k]], TrianglePointComparer.Instance))
+                    {
+                        rotations[1].Add(rotation[3 * i]);
+                        rotations[1].Add(rotation[3 * i + 1]);
+                        rotations[1].Add(rotation[3 * i + 2]);
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < 2; i++)
+        {
+            for (int j = 0; j < rotations[i].Count; j += 3)
+            {
+                int[] rot = rotations[i].Skip(j).Take(3).ToArray();
+                if (rot[0] >= rot[1] && rot[0] >= rot[2])
+                {
+                    if (rot[1] >= rot[2]) { rot[1] = 1; rot[2] = 0; }
+                    else { rot[1] = 0; rot[2] = 1; }
+                    rot[0] = 2;
+                }
+                else if (rot[1] >= rot[0] && rot[1] >= rot[2])
+                {
+                    if (rot[0] >= rot[2]) { rot[0] = 1; rot[2] = 0; }
+                    else { rot[0] = 0; rot[2] = 1; }
+                    rot[1] = 2;
+                }
+                else
+                {
+                    if (rot[0] >= rot[1]) { rot[0] = 1; rot[1] = 0; }
+                    else { rot[0] = 0; rot[1] = 1; }
+                    rot[2] = 2;
+                }
+
+                Vector3[] verts = new Vector3[3];
+                Vector3[] normals = new Vector3[3];
+                Vector4[] tangents = new Vector4[3];
+                for (int k = 0; k < 3; k++)
+                {
+                    int idx = rotations[i][j + k];
+                    verts[rot[k]] = rotatedPoints[idx].GetVertex();
+                    normals[rot[k]] = rotatedPoints[idx].GetNormal();
+                    tangents[rot[k]] = rotatedPoints[idx].GetTangent();
+                }
+
+                triangles[i].Add(Triangle.Create(
+                    verts, normals, tangents, rot));
+            }
+        }
+        
+        return triangles;
+    }
+    
+    public class TrianglePointComparer : IEqualityComparer<ITrianglePoint>
+    {
+        public static readonly TrianglePointComparer Instance = new();
+
+        public bool Equals(ITrianglePoint a, ITrianglePoint b)
+        {
+            if (a is null || b is null) return a is null && b is null;
+            return a.GetVertex() == b.GetVertex()
+                   && a.GetNormal() == b.GetNormal()
+                   && a.GetTangent() == b.GetTangent();
+        }
+
+        public int GetHashCode(ITrianglePoint p) =>
+            HashCode.Combine(p.GetVertex(), p.GetNormal(), p.GetTangent());
+    }
+
+    private int[] AdjustRotation(int[] newRotation, int[] oldRotation)
+    {
+        for (int i = 0; i < newRotation.Length; i++)
+        {
+            if (newRotation[i] < 3)
+            {
+                newRotation[i] = oldRotation[newRotation[i]];
+            }
+        }
+
+        return newRotation;
+    }
 
     private List<Vector2> GetCoordinatesInPlaneBasis(List<Vector3> projections)
     {
@@ -190,20 +410,49 @@ public class TriangleBuilder : ITriangleBuilder
 
         return newVertices;
     }
+    
+    private List<Vector2> GetCoordinatesInPlaneBasisTest(List<Vector3> projections)
+    {
+        Vector2[] newVertices = new Vector2[projections.Count];
+        
+        for (int i = 0; i < projections.Count - 2; i++)
+        {
+            if (Vector3.Angle(projections[(i+1) % 3] - projections[i], projections[3] - projections[i]) < 0.001f &&
+                Vector3.Angle(projections[(i+2) % 3] - projections[i], projections[4] - projections[i]) < 0.001f)
+            {
+                newVertices[i] = new Vector2(0f, 0f);
+                newVertices[(i+1) % 3] = new Vector2(1f, 0f);
+                newVertices[(i+2) % 3] = new Vector2(0f, 1f);
+                newVertices[3] = new Vector2((projections[3] - projections[i]).magnitude/(projections[(i+1) % 3] - projections[i]).magnitude, 0f);
+                newVertices[4] = new Vector2(0f, (projections[4] - projections[i]).magnitude/(projections[(i+2) % 3] - projections[i]).magnitude);
+                break;
+            }
+            
+            if(Vector3.Angle(projections[(i+1) % 3] - projections[i], projections[4] - projections[i]) < 0.001f &&
+                    Vector3.Angle(projections[(i+2) % 3] - projections[i], projections[3] - projections[i]) < 0.001f) 
+            {
+                newVertices[i] = new Vector2(0f, 0f);
+                newVertices[(i+1) % 3] = new Vector2(1f, 0f);
+                newVertices[(i+2) % 3] = new Vector2(0f, 1f);
+                newVertices[3] = new Vector2((projections[4] - projections[i]).magnitude/(projections[(i+1) % 3] - projections[i]).magnitude, 0f);
+                newVertices[4] = new Vector2(0f, (projections[3] - projections[i]).magnitude/(projections[(i+2) % 3] - projections[i]).magnitude);
+                break;
+            }
+        }
+
+        return newVertices.ToList();
+    }
 
     private Vector2 FindNewCoords(Vector3 projection, Vector3 contactPoint, Vector3 dirU, Vector3 dirV)
     {
         Vector3 vertex = projection - contactPoint;
         float[][] matrix = new float[3][];
 
-        for (int i = 0; i < 3; i++)
-        {
-            matrix[0] = new float[] {vertex.x, dirU.x, dirV.x};
-            matrix[1] = new float[] {vertex.y, dirU.y, dirV.y};
-        }
+        matrix[0] = new[] {vertex.x, dirU.x, dirV.x};
+        matrix[1] = new[] {vertex.y, dirU.y, dirV.y};
 
         float multiplicator = matrix[1][0] / matrix[0][0];
-        matrix[2] = new float[]
+        matrix[2] = new[]
         {
             matrix[1][0] - multiplicator*matrix[0][0],
             matrix[1][1] - multiplicator*matrix[0][1],
@@ -251,6 +500,31 @@ public class TriangleBuilder : ITriangleBuilder
             dividedPoints[0].AddRange(newVertices);
             dividedPoints[1].AddRange(newVertices);
         }
+    }
+    
+    private List<ITrianglePoint> FindNewTrianglePoints(List<ITrianglePoint>[] dividedPoints, IIntersectionPointProvider intersectionPointProvider)
+    {
+        if (dividedPoints[0].Count > 0 && dividedPoints[1].Count > 0)
+        {
+            List<ITrianglePoint> list = new List<ITrianglePoint>(); 
+            TrianglePoint[] newVertices = new TrianglePoint[2];
+            
+            for (int i = 0; i < dividedPoints[0].Count; i++)
+            {
+                for (int j = 0; j < dividedPoints[1].Count; j++)
+                {
+                    newVertices[i + j] = new TrianglePoint();
+                    newVertices[i + j].SetProperties(intersectionPointProvider.ComputeIntersectionPoint(dividedPoints[0][i].GetVertex(), dividedPoints[1][j].GetVertex(), _contactData),
+                        (dividedPoints[0][i].GetNormal() + dividedPoints[1][j].GetNormal()).normalized,
+                        (dividedPoints[0][i].GetTangent() + dividedPoints[1][j].GetTangent()).normalized);
+                }
+            }
+        
+            list.AddRange(newVertices);
+            return list;
+        }
+
+        return new List<ITrianglePoint>();
     }
 }
 
