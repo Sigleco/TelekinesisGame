@@ -15,8 +15,9 @@ public class CuttingTestImproved : MonoBehaviour
     private Mesh _mesh;
     private Mesh leftMesh, rightMesh;
     private MeshFilter _filter;
-    List<Triangle> leftTriangles = new List<Triangle>(), rightTriangles = new List<Triangle>();
-    private List<ITrianglePoint> intersectionPoints = new List<ITrianglePoint>();
+    private List<Triangle> leftTriangles = new List<Triangle>(), rightTriangles = new List<Triangle>(), 
+        newSideTriangles = new List<Triangle>();
+    private HashSet<ITrianglePoint> intersectionPoints = new HashSet<ITrianglePoint>(new TrianglePointVertexComparer());
 
     private void Start()
     {
@@ -60,8 +61,12 @@ public class CuttingTestImproved : MonoBehaviour
             points.Add(p2);
             
             points.AddRange(FindNewTrianglePoints(newPoints, _intersectionPointProvider));
-            StoreNewTrianglePoints(points[3], points[4]);
-
+            
+            if (points.Count > 3)
+            {
+                StoreNewTrianglePoints(points[3], points[4]);
+            }
+            
             if (newPoints[0].Count == 0)
             {
                 Triangle newTriangles = builder.BuildTriangles(newPoints[1], new[] {0, 1, 2});
@@ -104,6 +109,7 @@ public class CuttingTestImproved : MonoBehaviour
         List<Triangle>[] newTriangles = builder.BuildTriangles(newPoints, points, new []{2, 0, 1});*/
         
         StoreSides(builder.BuildTriangles(intersectionPoints));
+        AddNewSideToDividedSides();
 
         leftMesh = CreateNewMesh(rightTriangles);
         GameObject obj = new GameObject {transform = {position = Vector3.right * 1f}};
@@ -121,7 +127,6 @@ public class CuttingTestImproved : MonoBehaviour
         rend1.material = _filter.gameObject.GetComponent<MeshRenderer>().material;
         obj1.AddComponent<BoxCollider>();
         
-        Debug.Log(System.IO.Path.GetFullPath("rotation_debug.txt"));
         Debug.Log("End");
     }
     
@@ -155,11 +160,16 @@ public class CuttingTestImproved : MonoBehaviour
         intersectionPoints.Add(point1);
         intersectionPoints.Add(point2);
     }
-    
+
     private void StoreSides(List<Triangle>[] triangles)
     {
         leftTriangles.AddRange(triangles[0]);
         rightTriangles.AddRange(triangles[1]);
+    }
+    
+    private void StoreSides(List<Triangle> triangles)
+    {
+        newSideTriangles.AddRange(triangles);
     }
     
     private void StoreSides(Triangle triangle)
@@ -173,6 +183,55 @@ public class CuttingTestImproved : MonoBehaviour
         {
             rightTriangles.Add(triangle);
         }
+    }
+
+    private void AddNewSideToDividedSides()
+    {
+        Vector3 leftNormal = GetLeftNormal();
+        Vector3[] vertices = newSideTriangles[0].Vertices.ToArray();
+        if (Vector3.SignedAngle(vertices[1] - vertices[0], vertices[2] - vertices[0], leftNormal) < 0)
+        {
+            for (int i = 0; i < newSideTriangles.Count; i++)
+            {
+                newSideTriangles[i].Normals = new[] {-leftNormal, -leftNormal, -leftNormal};
+            }
+            
+            rightTriangles.AddRange(newSideTriangles);
+            
+            for (int i = 0; i < newSideTriangles.Count; i++)
+            {
+                newSideTriangles[i].Normals = new[] {leftNormal, leftNormal, leftNormal};
+            }
+            
+            /*for (int i = 0; i < UPPER; i++)
+            {
+                
+            }*/
+        }
+    }
+
+    private Vector3 GetLeftNormal()
+    {
+        Vector3[] vertices = newSideTriangles[0].Vertices;
+        var newSideNormal= Vector3.Cross(vertices[1] - vertices[0], vertices[2] - vertices[0]);
+
+        for (int i = 0; i < 3; i++)
+        {
+            var normals = leftTriangles[i].Normals;
+            normals[0] += normals[1];
+            normals[0] += normals[2];
+            
+            if (Vector3.Angle(normals[0].normalized, newSideNormal) > 90)
+            {
+                return newSideNormal;
+            }
+            if(Vector3.Angle(normals[0].normalized, newSideNormal) < 90)
+            {
+                return -newSideNormal;
+            }
+        }
+
+        return newSideNormal;
     }
 
     private Mesh CreateNewMesh(List<Triangle> triangles)
@@ -319,16 +378,34 @@ public class TriangleBuilder : ITriangleBuilder
         _contactData = contactData;
     }
 
-    public List<Triangle> BuildTriangles(List<ITrianglePoint> points)
+    public List<Triangle> BuildTriangles(HashSet<ITrianglePoint> points)
     {
         List<Vector3> tempVertices = points.Select(p => p.GetVertex()).ToList();
         
-        return TransformToTriangleList(points);
+        return TransformToTriangleList(points, _triangulator.Triangulate(GetCoordinatesInPlaneBasisTEST(tempVertices)));
     }
     
-    private List<Triangle> TransformToTriangleList(List<ITrianglePoint> points)
+    private List<Triangle> TransformToTriangleList(HashSet<ITrianglePoint> points, int[] rotation)
     {
-        return ;
+        List<Triangle> result = new List<Triangle>();
+
+        for (int i = 0; i < rotation.Length; i += 3)
+        {
+            var chunk = new[]
+            {
+                points.ElementAt(rotation[i]),
+                points.ElementAt(rotation[i+1]),
+                points.ElementAt(rotation[i+2])
+            };
+
+            result.Add(Triangle.Create(
+                chunk.Select(p => p.GetVertex()).ToArray(),
+                chunk.Select(p => p.GetNormal()).ToArray(),
+                chunk.Select(p => p.GetTangent()).ToArray(),
+                new[] { 0, 1, 2 }));
+        }
+        
+        return result;
     }
     
     public Triangle BuildTriangles(List<ITrianglePoint> points, int[] originalRotation)
@@ -427,6 +504,49 @@ public class TriangleBuilder : ITriangleBuilder
         }
 
         return newRotation;
+    }
+
+    private List<Vector2> GetCoordinatesInPlaneBasisTEST(List<Vector3> vertices)
+    {
+        Vector2[] newVertices = new Vector2[vertices.Count];
+        int i;
+
+        for (i = 0; i < vertices.Count - 3; i++)
+        {
+            float angle = Vector3.Angle(vertices[i+1] - vertices[i], vertices[i+2] - vertices[i]);
+            if (angle > 0.1f && 180f - angle > 0.1f)
+            {
+                newVertices[i] = new Vector2(0f, 0f);
+                newVertices[i+1] = new Vector2(1f, 0f);
+                newVertices[i+2] = new Vector2(0f, 1f);
+                break;
+            }
+        }
+
+        Vector3 firstAxis = vertices[i + 1] - vertices[i];
+        Vector3 secondAxis = vertices[i + 2] - vertices[i];
+        
+        for (int j = 0; j < vertices.Count; j++)
+        {
+            if (j==i || j==i+1 || j==i+2)
+            {
+                continue;
+            }
+
+            newVertices[j] = GramDecompose(vertices[j] - vertices[i], firstAxis, secondAxis);
+        }
+
+        return newVertices.ToList();
+    }
+
+    private Vector2 GramDecompose(Vector3 vertex, Vector3 firstAxis, Vector3 secondAxis)
+    {
+        float grammDeterminant = Mathf.Pow(Vector3.Cross(firstAxis, secondAxis).magnitude, 2);
+        float a = Vector3.Dot(vertex, firstAxis) * Vector3.Dot(secondAxis, secondAxis)
+                  - Vector3.Dot(vertex, secondAxis) * Vector3.Dot(firstAxis, secondAxis);
+        float b = Vector3.Dot(vertex, secondAxis) * Vector3.Dot(firstAxis, firstAxis)
+                  - Vector3.Dot(vertex, firstAxis) * Vector3.Dot(firstAxis, secondAxis);
+        return new Vector2(a/grammDeterminant, b/grammDeterminant);
     }
 
     private List<Vector2> GetCoordinatesInPlaneBasis(List<Vector3> projections)
@@ -586,7 +706,7 @@ public class Triangle
     private Triangle() {} // запрет прямого вызова
 
     public Vector3[] Vertices { get; private set; }
-    public Vector3[] Normals  { get; private set; }
+    public Vector3[] Normals  { get; set; }
     public Vector4[] Tangents { get; private set; }
     
     public int[] Triangles { get; private set; }

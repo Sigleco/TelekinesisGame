@@ -11,6 +11,19 @@ public interface ITrianglePoint
     Vector4 GetTangent();
 }
 
+public class TrianglePointVertexComparer : IEqualityComparer<ITrianglePoint>
+{
+    public bool Equals(ITrianglePoint a, ITrianglePoint b)
+    {
+        return a.GetVertex().Equals(b.GetVertex());
+    }
+
+    public int GetHashCode(ITrianglePoint point)
+    {
+        return point.GetVertex().GetHashCode();
+    }
+}
+
 public class TrianglePointComparer : IEqualityComparer<ITrianglePoint>
 {
     public static readonly TrianglePointComparer Instance = new();
